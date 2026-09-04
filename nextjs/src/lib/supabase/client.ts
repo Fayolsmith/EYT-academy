@@ -5,11 +5,16 @@ import { Database } from "@/lib/types";
 const defaultUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const defaultKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.placeholder';
 
+let spaClient: ReturnType<typeof createBrowserClient<Database>> | null = null;
+
 export function createSPAClient() {
-    return createBrowserClient<Database>(
-        defaultUrl,
-        defaultKey
-    )
+    if (!spaClient) {
+        spaClient = createBrowserClient<Database>(
+            defaultUrl,
+            defaultKey
+        );
+    }
+    return spaClient;
 }
 
 export async function createSPASassClient() {
@@ -24,7 +29,7 @@ export async function createSPASassClientAuthenticated() {
         const user = await client.auth.getSession();
         if (!user.data || !user.data.session) {
             if (typeof window !== 'undefined') {
-                window.location.href = '/auth/login';
+                window.location.href = '/login';
             }
         }
     } catch {

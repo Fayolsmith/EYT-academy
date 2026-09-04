@@ -19,8 +19,6 @@ import {
     UserCheck
 } from 'lucide-react';
 import { useGlobal } from '@/lib/context/GlobalContext';
-import { createSPAClient } from '@/lib/supabase/client';
-import { EYTService } from '@/lib/eyt-service';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -28,7 +26,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const router = useRouter();
 
-    const { profile, setRole } = useGlobal();
+    const { profile, user, loading, logout, setRole } = useGlobal();
     const isOwner = profile?.role === 'owner';
 
     useEffect(() => {
@@ -41,16 +39,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
-    const handleLogout = async () => {
-        try {
-            if (EYTService.isSupabaseConfigured()) {
-                const client = createSPAClient();
-                await client.auth.signOut();
-            }
-        } catch (error) {
-            console.error('Logout error:', error);
+    useEffect(() => {
+        if (!loading && !profile && !user) {
+            router.replace('/login');
         }
-        router.push('/');
+    }, [loading, profile, user, router]);
+
+    const handleLogout = async () => {
+        await logout();
+        window.location.href = '/login';
     };
 
     const toggleRole = () => {
@@ -84,6 +81,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     ];
 
     const navItems = isOwner ? ownerNav : parentNav;
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-[#F3F7FD]/40">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="w-8 h-8 border-3 border-[#1E4E8C] border-t-transparent rounded-full animate-spin" />
+                    <span className="text-xs font-semibold text-[#1E4E8C]">Loading Portal...</span>
+                </div>
+            </div>
+        );
+    }
+
+    if (!profile && !user) {
+        return null;
+    }
 
     return (
         <div className="min-h-screen bg-[#F3F7FD]/40 text-[#14263F]">

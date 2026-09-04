@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Menu, X, BookOpen, Phone, UserCheck, Sparkles, Download, LayoutDashboard } from 'lucide-react';
+import { Menu, X, BookOpen, Phone, Sparkles, Download, LayoutDashboard } from 'lucide-react';
+import { createSPAClient } from '@/lib/supabase/client';
 import { EYTService, UserProfile } from '@/lib/eyt-service';
 
 interface BeforeInstallPromptEvent extends Event {
@@ -12,13 +13,54 @@ interface BeforeInstallPromptEvent extends Event {
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authProfile, setAuthProfile] = useState<UserProfile | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isDev, setIsDev] = useState(false);
 
+  const checkAuth = async () => {
+    if (EYTService.isSupabaseConfigured()) {
+      try {
+        const client = createSPAClient();
+        const { data: { session } } = await client.auth.getSession();
+        if (session?.user) {
+          setIsAuthenticated(true);
+          const { data: profileData } = await client
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .maybeSingle();
+
+          const prof = profileData as Record<string, unknown> | null;
+          setAuthProfile({
+            id: session.user.id,
+            email: session.user.email || '',
+            full_name: (prof?.full_name as string) || session.user.email?.split('@')[0] || 'User',
+            role: (prof?.role as 'owner' | 'parent') || 'parent',
+            phone: (prof?.phone as string) || null,
+            avatar_url: (prof?.avatar_url as string) || null,
+          });
+          return;
+        }
+      } catch (err) {
+        console.error('Navbar auth check error:', err);
+      }
+    }
+
+    // Local authenticated user check
+    const localAuth = EYTService.getAuthenticatedUser();
+    if (localAuth) {
+      setIsAuthenticated(true);
+      setAuthProfile(localAuth);
+    } else {
+      setIsAuthenticated(false);
+      setAuthProfile(null);
+    }
+  };
+
   useEffect(() => {
-    setCurrentUser(EYTService.getCurrentUser());
+    checkAuth();
 
     if (
       process.env.NODE_ENV === 'development' &&
@@ -26,6 +68,22 @@ export default function Navbar() {
       (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ) {
       setIsDev(true);
+    }
+
+    if (EYTService.isSupabaseConfigured()) {
+      const client = createSPAClient();
+      const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
+        if (session?.user) {
+          checkAuth();
+        } else {
+          setIsAuthenticated(false);
+          setAuthProfile(null);
+        }
+      });
+
+      return () => {
+        subscription.unsubscribe();
+      };
     }
 
     const handleBeforeInstall = (e: Event) => {
@@ -53,14 +111,19 @@ export default function Navbar() {
     setDeferredPrompt(null);
   };
 
-  const toggleRole = () => {
-    if (currentUser?.role === 'owner') {
-      const parent = EYTService.switchToParent();
-      setCurrentUser(parent);
-    } else {
-      const owner = EYTService.switchToOwner();
-      setCurrentUser(owner);
+  const handleSignOut = async () => {
+    try {
+      if (EYTService.isSupabaseConfigured()) {
+        const client = createSPAClient();
+        await client.auth.signOut();
+      }
+    } catch (err) {
+      console.error('Sign out error:', err);
     }
+    EYTService.logout();
+    setIsAuthenticated(false);
+    setAuthProfile(null);
+    window.location.href = '/';
   };
 
   return (
@@ -85,24 +148,31 @@ export default function Navbar() {
               <span className="font-semibold">09133651659</span>
             </a>
 
-            <Link
-              href="/login"
-              className="text-blue-100 hover:text-white transition-colors font-semibold text-xs underline decoration-amber-400 underline-offset-2"
-            >
-              Sign In
-            </Link>
-
-            {/* Quick Demo Switcher - only on localhost dev */}
-            {isDev && (
-              <button
-                onClick={toggleRole}
-                title="Click to toggle between Owner and Parent view (localhost only)"
-                className="flex items-center gap-1 bg-white/10 hover:bg-white/20 text-white px-2 py-0.5 rounded text-xs transition-colors border border-white/20"
+            {isAuthenticated ? (
+              <div className="flex items-center gap-2">
+                <span className="text-blue-100 hidden sm:inline">
+                  Signed in as <strong className="text-amber-300 font-bold">{authProfile?.full_name}</strong>
+                </span>
+                <button
+                  onClick={handleSignOut}
+                  className="text-amber-300 hover:text-white transition-colors font-bold text-xs underline underline-offset-2"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="text-blue-100 hover:text-white transition-colors font-semibold text-xs underline decoration-amber-400 underline-offset-2"
               >
-                <UserCheck className="w-3 h-3 text-[#D4A017]" />
-                <span className="hidden md:inline">Viewing as:</span>
-                <strong className="capitalize text-[#D4A017]">{currentUser?.role === 'owner' ? 'Mrs Sarah (Owner)' : 'Parent'}</strong>
-              </button>
+                Sign In
+              </Link>
+            )}
+
+            {isDev && (
+              <span className="hidden lg:inline text-[10px] text-amber-300 bg-white/10 px-1.5 py-0.5 rounded border border-white/20">
+                Localhost Dev
+              </span>
             )}
           </div>
         </div>
@@ -164,38 +234,58 @@ export default function Navbar() {
                 </button>
               )}
 
-              <Link
-                href="/login"
-                className="text-xs font-semibold text-[#14263F] hover:text-[#1E4E8C] px-2 py-1 transition-colors"
-              >
-                Sign In
-              </Link>
-
-              <Link
-                href="/app"
-                className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-lg bg-[#1E4E8C] text-white hover:bg-[#153763] transition-all shadow-sm"
-              >
-                <LayoutDashboard className="w-4 h-4 text-[#D4A017]" />
-                {currentUser?.role === 'owner' ? "Sarah's Dashboard" : 'Parent Portal'}
-              </Link>
-
-              <Link
-                href="#enquiry"
-                className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-lg bg-[#D4A017] text-white hover:bg-[#A9790A] transition-all shadow-sm shadow-amber-200"
-              >
-                <Sparkles className="w-4 h-4" />
-                Enquire Now
-              </Link>
+              {isAuthenticated ? (
+                <>
+                  <Link
+                    href="/app"
+                    className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-lg bg-[#1E4E8C] text-white hover:bg-[#153763] transition-all shadow-sm"
+                  >
+                    <LayoutDashboard className="w-4 h-4 text-[#D4A017]" />
+                    {authProfile?.role === 'owner' ? "Sarah's Dashboard" : 'Parent Portal'}
+                  </Link>
+                  <button
+                    onClick={handleSignOut}
+                    className="text-xs font-semibold text-red-600 hover:text-red-800 px-2 py-1 transition-colors"
+                  >
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="text-xs font-semibold text-[#14263F] hover:text-[#1E4E8C] px-2 py-1 transition-colors"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="#enquiry"
+                    className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-lg bg-[#D4A017] text-white hover:bg-[#A9790A] transition-all shadow-sm shadow-amber-200"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Enquire Now
+                  </Link>
+                </>
+              )}
             </div>
 
             {/* Mobile menu button */}
             <div className="flex items-center gap-2 lg:hidden">
-              <Link
-                href="/app"
-                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#1E4E8C] text-white"
-              >
-                Portal
-              </Link>
+              {isAuthenticated ? (
+                <Link
+                  href="/app"
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#1E4E8C] text-white"
+                >
+                  Portal
+                </Link>
+              ) : (
+                <Link
+                  href="/login"
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#1E4E8C] text-[#1E4E8C]"
+                >
+                  Sign In
+                </Link>
+              )}
               <button
                 onClick={() => setIsOpen(!isOpen)}
                 aria-label="Toggle menu"
@@ -256,34 +346,52 @@ export default function Navbar() {
             </div>
 
             <div className="pt-4 border-t border-gray-100 flex flex-col gap-2">
-              <Link
-                href="/login"
-                onClick={() => setIsOpen(false)}
-                className="w-full text-center py-2.5 rounded-lg border border-[#1E4E8C] text-[#1E4E8C] font-semibold text-sm hover:bg-[#E8F0FA]"
-              >
-                Sign In (Login)
-              </Link>
-              <Link
-                href="/app"
-                onClick={() => setIsOpen(false)}
-                className="w-full text-center py-2.5 rounded-lg bg-[#1E4E8C] text-white font-semibold text-sm"
-              >
-                {currentUser?.role === 'owner' ? "Open Sarah's Dashboard" : 'Open Parent Portal'}
-              </Link>
-              <Link
-                href="#enquiry"
-                onClick={() => setIsOpen(false)}
-                className="w-full text-center py-2.5 rounded-lg bg-[#D4A017] text-white font-semibold text-sm"
-              >
-                Book / Send Enquiry
-              </Link>
-              <button
-                onClick={handleInstallClick}
-                className="w-full py-2.5 rounded-lg bg-[#E8F0FA] text-[#1E4E8C] font-semibold text-sm flex items-center justify-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Install App to Home Screen
-              </button>
+              {isAuthenticated ? (
+                <>
+                  <Link
+                    href="/app"
+                    onClick={() => setIsOpen(false)}
+                    className="w-full text-center py-2.5 rounded-lg bg-[#1E4E8C] text-white font-semibold text-sm"
+                  >
+                    {authProfile?.role === 'owner' ? "Open Sarah's Dashboard" : 'Open Parent Portal'}
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setIsOpen(false);
+                      handleSignOut();
+                    }}
+                    className="w-full text-center py-2.5 rounded-lg border border-red-200 text-red-600 font-semibold text-sm hover:bg-red-50"
+                  >
+                    Sign Out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    onClick={() => setIsOpen(false)}
+                    className="w-full text-center py-2.5 rounded-lg border border-[#1E4E8C] text-[#1E4E8C] font-semibold text-sm hover:bg-[#E8F0FA]"
+                  >
+                    Sign In (Portal Login)
+                  </Link>
+                  <Link
+                    href="#enquiry"
+                    onClick={() => setIsOpen(false)}
+                    className="w-full text-center py-2.5 rounded-lg bg-[#D4A017] text-white font-semibold text-sm"
+                  >
+                    Book / Send Enquiry
+                  </Link>
+                </>
+              )}
+              {isInstallable && (
+                <button
+                  onClick={handleInstallClick}
+                  className="w-full py-2.5 rounded-lg bg-[#E8F0FA] text-[#1E4E8C] font-semibold text-sm flex items-center justify-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Install App to Home Screen
+                </button>
+              )}
             </div>
           </div>
         )}

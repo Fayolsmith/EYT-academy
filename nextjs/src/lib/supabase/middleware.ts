@@ -9,7 +9,21 @@ export async function updateSession(request: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('YOURSUPABASE')) {
+    if (
+        !supabaseUrl ||
+        !supabaseAnonKey ||
+        supabaseUrl.includes('YOURSUPABASE') ||
+        supabaseUrl.includes('placeholder') ||
+        supabaseAnonKey === 'YYY' ||
+        supabaseAnonKey.includes('placeholder')
+    ) {
+        // In local/offline mode, check the session auth cookie
+        const eytAuth = request.cookies.get('eyt_auth')?.value;
+        if (eytAuth !== 'true' && request.nextUrl.pathname.startsWith('/app')) {
+            const url = request.nextUrl.clone();
+            url.pathname = '/login';
+            return NextResponse.redirect(url);
+        }
         return supabaseResponse;
     }
 
@@ -35,16 +49,21 @@ export async function updateSession(request: NextRequest) {
             }
         )
 
-        const {data: user} = await supabase.auth.getUser()
+        const { data, error } = await supabase.auth.getUser()
         if (
-            (!user || !user.user) && request.nextUrl.pathname.startsWith('/app')
+            (error || !data?.user) && request.nextUrl.pathname.startsWith('/app')
         ) {
             const url = request.nextUrl.clone()
-            url.pathname = '/auth/login'
+            url.pathname = '/login'
             return NextResponse.redirect(url)
         }
     } catch (err) {
         console.error('Supabase middleware error:', err)
+        if (request.nextUrl.pathname.startsWith('/app')) {
+            const url = request.nextUrl.clone()
+            url.pathname = '/login'
+            return NextResponse.redirect(url)
+        }
     }
 
     return supabaseResponse

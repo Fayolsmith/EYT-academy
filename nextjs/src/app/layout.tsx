@@ -54,16 +54,25 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').then(
-                    function(registration) {
-                      console.log('EYT ServiceWorker registration successful:', registration.scope);
-                    },
-                    function(err) {
-                      console.log('EYT ServiceWorker registration failed:', err);
+                var isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                if (isLocalhost) {
+                  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for (var r of registrations) {
+                      r.unregister();
                     }
-                  );
-                });
+                  });
+                } else {
+                  window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/sw.js').then(
+                      function(registration) {
+                        console.log('EYT ServiceWorker registered:', registration.scope);
+                      },
+                      function(err) {
+                        console.log('EYT ServiceWorker registration failed:', err);
+                      }
+                    );
+                  });
+                }
               }
             `,
           }}

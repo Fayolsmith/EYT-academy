@@ -20,6 +20,7 @@ interface GlobalContextType {
     user: User | null;
     profile: UserProfile | null;
     refreshUser: () => void;
+    logout: () => Promise<void>;
     setRole: (role: 'owner' | 'parent') => void;
 }
 
@@ -31,6 +32,7 @@ export function GlobalProvider({ children }: { children: React.ReactNode }) {
     const [profile, setProfile] = useState<UserProfile | null>(null);
 
     const loadData = async () => {
+        setLoading(true);
         try {
             if (EYTService.isSupabaseConfigured()) {
                 const client = createSPAClient();
@@ -66,21 +68,43 @@ export function GlobalProvider({ children }: { children: React.ReactNode }) {
                 }
             }
 
-            // Local fallback / demo mode
-            const localUser = EYTService.getCurrentUser();
-            setUser({
-                email: localUser.email,
-                id: localUser.id,
-                registered_at: new Date(),
-                full_name: localUser.full_name,
-                role: localUser.role,
-            });
-            setProfile(localUser);
+            // Check if there is an explicitly authenticated local session
+            const localAuth = EYTService.getAuthenticatedUser();
+            if (localAuth) {
+                setUser({
+                    email: localAuth.email,
+                    id: localAuth.id,
+                    registered_at: new Date(),
+                    full_name: localAuth.full_name,
+                    role: localAuth.role,
+                });
+                setProfile(localAuth);
+            } else {
+                setUser(null);
+                setProfile(null);
+            }
         } catch (error) {
             console.error('Error loading user data:', error);
-            const fallback = EYTService.getCurrentUser();
-            setProfile(fallback);
+            setUser(null);
+            setProfile(null);
         } finally {
+            setLoading(false);
+        }
+    };
+
+    const logout = async () => {
+        setLoading(true);
+        try {
+            if (EYTService.isSupabaseConfigured()) {
+                const client = createSPAClient();
+                await client.auth.signOut();
+            }
+        } catch (error) {
+            console.error('Logout error:', error);
+        } finally {
+            EYTService.logout();
+            setUser(null);
+            setProfile(null);
             setLoading(false);
         }
     };
@@ -111,10 +135,27 @@ export function GlobalProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         loadData();
+
+        if (EYTService.isSupabaseConfigured()) {
+            const client = createSPAClient();
+            const { data: { subscription } } = client.auth.onAuthStateChange((event, session) => {
+                if (event === 'SIGNED_OUT' || !session) {
+                    EYTService.logout();
+                    setUser(null);
+                    setProfile(null);
+                } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                    loadData();
+                }
+            });
+
+            return () => {
+                subscription.unsubscribe();
+            };
+        }
     }, []);
 
     return (
-        <GlobalContext.Provider value={{ loading, user, profile, refreshUser: loadData, setRole }}>
+        <GlobalContext.Provider value={{ loading, user, profile, refreshUser: loadData, logout, setRole }}>
             {children}
         </GlobalContext.Provider>
     );

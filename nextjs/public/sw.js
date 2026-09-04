@@ -37,8 +37,18 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
-  // Bypass Supabase API / auth requests from caching
-  if (url.pathname.startsWith('/api') || url.hostname.includes('supabase.co')) {
+  // Bypass localhost / dev server completely
+  if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+    return;
+  }
+
+  // Bypass dev chunks, hot reloads, Supabase API / auth requests
+  if (
+    url.pathname.startsWith('/api') ||
+    url.hostname.includes('supabase.co') ||
+    url.pathname.includes('webpack') ||
+    url.pathname.includes('hot-update')
+  ) {
     return;
   }
 
@@ -60,14 +70,19 @@ self.addEventListener('fetch', (event) => {
         }
         return networkResponse;
       })
-      .catch(() => {
-        return caches.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          if (event.request.mode === 'navigate') {
-            return caches.match('/offline.html');
-          }
+      .catch(async () => {
+        const cachedResponse = await caches.match(event.request);
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        if (event.request.mode === 'navigate') {
+          const offlineFallback = await caches.match('/offline.html');
+          if (offlineFallback) return offlineFallback;
+        }
+        // If not found in cache and not navigation, return network error response
+        return new Response('Network error occurred', {
+          status: 408,
+          headers: { 'Content-Type': 'text/plain' },
         });
       })
   );

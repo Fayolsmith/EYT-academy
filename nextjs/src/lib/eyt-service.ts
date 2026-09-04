@@ -412,6 +412,15 @@ class StorageManager {
       console.warn('LocalStorage save error', e);
     }
   }
+
+  remove(key: string): void {
+    if (!this.isBrowser) return;
+    try {
+      localStorage.removeItem(`eyt_${key}`);
+    } catch (e) {
+      console.warn('LocalStorage remove error', e);
+    }
+  }
 }
 
 const storage = new StorageManager();
@@ -427,12 +436,35 @@ export const EYTService = {
   // ------------------------------------------------
   // CURRENT USER / AUTH STATE
   // ------------------------------------------------
+  isAuthenticated(): boolean {
+    return storage.get<boolean>('is_authenticated', false);
+  },
+
+  getAuthenticatedUser(): UserProfile | null {
+    if (!this.isAuthenticated()) return null;
+    return storage.get<UserProfile | null>('current_user', null);
+  },
+
   getCurrentUser(): UserProfile {
-    return storage.get<UserProfile>('current_user', DEFAULT_PARENT_PROFILE);
+    const authUser = this.getAuthenticatedUser();
+    if (authUser) return authUser;
+    return DEFAULT_PARENT_PROFILE;
   },
 
   setCurrentUser(user: UserProfile) {
     storage.set('current_user', user);
+    storage.set('is_authenticated', true);
+    if (typeof document !== 'undefined') {
+      document.cookie = 'eyt_auth=true; path=/; max-age=604800; SameSite=Lax';
+    }
+  },
+
+  logout() {
+    storage.remove('current_user');
+    storage.set('is_authenticated', false);
+    if (typeof document !== 'undefined') {
+      document.cookie = 'eyt_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+    }
   },
 
   switchToOwner(): UserProfile {
