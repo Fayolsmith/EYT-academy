@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -24,11 +24,22 @@ import { EYTService } from '@/lib/eyt-service';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const [isSidebarOpen, setSidebarOpen] = useState(false);
+    const [isDev, setIsDev] = useState(false);
     const pathname = usePathname();
     const router = useRouter();
 
     const { profile, setRole } = useGlobal();
     const isOwner = profile?.role === 'owner';
+
+    useEffect(() => {
+        if (
+            process.env.NODE_ENV === 'development' &&
+            typeof window !== 'undefined' &&
+            (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ) {
+            setIsDev(true);
+        }
+    }, []);
 
     const handleLogout = async () => {
         try {
@@ -120,13 +131,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                             <UserCheck className="w-3.5 h-3.5 text-[#D4A017]" />
                             <span>Role: <strong className="capitalize text-[#1E4E8C]">{profile?.role || 'Parent'}</strong></span>
                         </div>
-                        <button
-                            onClick={toggleRole}
-                            className="text-[11px] font-bold text-[#D4A017] hover:underline"
-                            title="Switch view between Parent and Owner"
-                        >
-                            Toggle View
-                        </button>
+                        {isDev && (
+                            <button
+                                onClick={toggleRole}
+                                className="text-[11px] font-bold text-[#D4A017] hover:underline"
+                                title="Localhost Dev only: Switch view between Parent and Owner"
+                            >
+                                Toggle View
+                            </button>
+                        )}
                     </div>
 
                     {/* Nav Links */}
@@ -206,15 +219,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        {/* Quick Role Switcher Button */}
-                        <button
-                            onClick={toggleRole}
-                            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border border-[#C7DAF3] bg-[#E8F0FA] text-[#1E4E8C] hover:bg-[#d8e6f7] transition-all"
-                        >
-                            <UserCheck className="w-3.5 h-3.5 text-[#D4A017]" />
-                            <span className="hidden sm:inline">Switch Mode:</span>
-                            <span className="text-[#D4A017]">{isOwner ? 'Mrs Sarah' : 'Parent'}</span>
-                        </button>
+                        {/* Quick Role Switcher Button - Localhost Dev Only */}
+                        {isDev && (
+                            <button
+                                onClick={toggleRole}
+                                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border border-[#C7DAF3] bg-[#E8F0FA] text-[#1E4E8C] hover:bg-[#d8e6f7] transition-all"
+                            >
+                                <UserCheck className="w-3.5 h-3.5 text-[#D4A017]" />
+                                <span className="hidden sm:inline">Switch Mode:</span>
+                                <span className="text-[#D4A017]">{isOwner ? 'Mrs Sarah' : 'Parent'}</span>
+                            </button>
+                        )}
 
                         <Link
                             href="/"

@@ -15,9 +15,18 @@ export default function Navbar() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstallable, setIsInstallable] = useState(false);
+  const [isDev, setIsDev] = useState(false);
 
   useEffect(() => {
     setCurrentUser(EYTService.getCurrentUser());
+
+    if (
+      process.env.NODE_ENV === 'development' &&
+      typeof window !== 'undefined' &&
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ) {
+      setIsDev(true);
+    }
 
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
@@ -76,16 +85,25 @@ export default function Navbar() {
               <span className="font-semibold">09133651659</span>
             </a>
 
-            {/* Quick Demo Switcher */}
-            <button
-              onClick={toggleRole}
-              title="Click to toggle between Owner and Parent view for previewing"
-              className="flex items-center gap-1 bg-white/10 hover:bg-white/20 text-white px-2 py-0.5 rounded text-xs transition-colors border border-white/20"
+            <Link
+              href="/login"
+              className="text-blue-100 hover:text-white transition-colors font-semibold text-xs underline decoration-amber-400 underline-offset-2"
             >
-              <UserCheck className="w-3 h-3 text-[#D4A017]" />
-              <span className="hidden md:inline">Viewing as:</span>
-              <strong className="capitalize text-[#D4A017]">{currentUser?.role === 'owner' ? 'Mrs Sarah (Owner)' : 'Parent'}</strong>
-            </button>
+              Sign In
+            </Link>
+
+            {/* Quick Demo Switcher - only on localhost dev */}
+            {isDev && (
+              <button
+                onClick={toggleRole}
+                title="Click to toggle between Owner and Parent view (localhost only)"
+                className="flex items-center gap-1 bg-white/10 hover:bg-white/20 text-white px-2 py-0.5 rounded text-xs transition-colors border border-white/20"
+              >
+                <UserCheck className="w-3 h-3 text-[#D4A017]" />
+                <span className="hidden md:inline">Viewing as:</span>
+                <strong className="capitalize text-[#D4A017]">{currentUser?.role === 'owner' ? 'Mrs Sarah (Owner)' : 'Parent'}</strong>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -145,6 +163,13 @@ export default function Navbar() {
                   Install App
                 </button>
               )}
+
+              <Link
+                href="/login"
+                className="text-xs font-semibold text-[#14263F] hover:text-[#1E4E8C] px-2 py-1 transition-colors"
+              >
+                Sign In
+              </Link>
 
               <Link
                 href="/app"
@@ -231,6 +256,13 @@ export default function Navbar() {
             </div>
 
             <div className="pt-4 border-t border-gray-100 flex flex-col gap-2">
+              <Link
+                href="/login"
+                onClick={() => setIsOpen(false)}
+                className="w-full text-center py-2.5 rounded-lg border border-[#1E4E8C] text-[#1E4E8C] font-semibold text-sm hover:bg-[#E8F0FA]"
+              >
+                Sign In (Login)
+              </Link>
               <Link
                 href="/app"
                 onClick={() => setIsOpen(false)}

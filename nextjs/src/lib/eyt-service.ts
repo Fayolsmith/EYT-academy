@@ -3,6 +3,7 @@
 
 import { createSPAClient } from '@/lib/supabase/client';
 import { UserRole, LessonMode, BookingStatus, MilestoneStatus, SubjectArea, InvoiceStatus, EnquiryStatus } from '@/lib/types';
+export type { UserRole, LessonMode, BookingStatus, MilestoneStatus, SubjectArea, InvoiceStatus, EnquiryStatus };
 
 export interface Child {
   id: string;
