@@ -1,48 +1,58 @@
 'use client';
 
-import {createSPASassClient} from '@/lib/supabase/client';
+import { createSPAClient } from '@/lib/supabase/client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import SSOButtons from "@/components/SSOButtons";
+import { EYTService } from '@/lib/eyt-service';
 
 export default function RegisterPage() {
+    const [fullName, setFullName] = useState('');
+    const [phone, setPhone] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const [acceptedTerms, setAcceptedTerms] = useState(false);
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-
-        if (!acceptedTerms) {
-            setError('You must accept the Terms of Service and Privacy Policy');
-            return;
-        }
-
-        if (password !== confirmPassword) {
-            setError("Passwords don't match");
-            return;
-        }
-
         setLoading(true);
 
         try {
-            const supabase = await createSPASassClient();
-            const { error } = await supabase.registerEmail(email, password);
+            if (EYTService.isSupabaseConfigured()) {
+                const client = createSPAClient();
+                const { error: signUpError } = await client.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        data: {
+                            full_name: fullName,
+                            phone: phone,
+                            role: 'parent',
+                        },
+                    },
+                });
+                if (signUpError) throw signUpError;
+            } else {
+                // Local demo registration
+                EYTService.setCurrentUser({
+                    id: `parent-${Date.now()}`,
+                    role: 'parent',
+                    full_name: fullName || 'Parent',
+                    phone: phone || null,
+                    email: email,
+                    avatar_url: null,
+                });
+            }
 
-            if (error) throw error;
-
-            router.push('/auth/verify-email');
-        } catch (err: Error | unknown) {
-            if(err instanceof Error) {
+            router.push('/app?new_account=true');
+        } catch (err) {
+            if (err instanceof Error) {
                 setError(err.message);
             } else {
-                setError('An unknown error occurred');
+                setError('Registration failed. Please try again.');
             }
         } finally {
             setLoading(false);
@@ -50,120 +60,93 @@ export default function RegisterPage() {
     };
 
     return (
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+        <div className="bg-white py-8 px-6 shadow-xl rounded-2xl border border-gray-100 sm:px-10 space-y-6">
+            <div>
+                <h3 className="font-heading text-xl font-bold text-[#1E4E8C]">
+                    Create Parent Account
+                </h3>
+                <p className="text-xs text-[#6B7280] mt-0.5">
+                    Access lesson bookings, child progress & learning resources
+                </p>
+            </div>
+
             {error && (
-                <div className="mb-4 p-4 text-sm text-red-700 bg-red-100 rounded-lg">
+                <div className="p-3 text-xs text-red-700 bg-red-50 rounded-xl border border-red-200">
                     {error}
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                        Email address
+                    <label className="block text-xs font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                        Full Name *
                     </label>
-                    <div className="mt-1">
-                        <input
-                            id="email"
-                            name="email"
-                            type="email"
-                            autoComplete="email"
-                            required
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500"
-                        />
-                    </div>
+                    <input
+                        type="text"
+                        required
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="e.g. Mrs Elizabeth Adeleke"
+                        className="block w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm focus:border-[#1E4E8C] focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
+                    />
                 </div>
 
                 <div>
-                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                        Password
+                    <label className="block text-xs font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                        Phone / WhatsApp *
                     </label>
-                    <div className="mt-1">
-                        <input
-                            id="password"
-                            name="password"
-                            type="password"
-                            autoComplete="new-password"
-                            required
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500"
-                        />
-                    </div>
+                    <input
+                        type="tel"
+                        required
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="e.g. 08023456789"
+                        className="block w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm focus:border-[#1E4E8C] focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
+                    />
                 </div>
 
                 <div>
-                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                        Confirm Password
+                    <label className="block text-xs font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                        Email address *
                     </label>
-                    <div className="mt-1">
-                        <input
-                            id="confirmPassword"
-                            name="confirmPassword"
-                            type="password"
-                            autoComplete="new-password"
-                            required
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500"
-                        />
-                    </div>
+                    <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="parent@example.com"
+                        className="block w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm focus:border-[#1E4E8C] focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
+                    />
                 </div>
 
-                <div className="space-y-4">
-                    <div className="flex items-start">
-                        <div className="flex h-5 items-center">
-                            <input
-                                id="terms"
-                                name="terms"
-                                type="checkbox"
-                                checked={acceptedTerms}
-                                onChange={(e) => setAcceptedTerms(e.target.checked)}
-                                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                            />
-                        </div>
-                        <div className="ml-3 text-sm">
-                            <label htmlFor="terms" className="text-gray-600">
-                                I agree to the{' '}
-                                <Link
-                                    href="/legal/terms"
-                                    className="font-medium text-primary-600 hover:text-primary-500"
-                                    target="_blank"
-                                >
-                                    Terms of Service
-                                </Link>{' '}
-                                and{' '}
-                                <Link
-                                    href="/legal/privacy"
-                                    className="font-medium text-primary-600 hover:text-primary-500"
-                                    target="_blank"
-                                >
-                                    Privacy Policy
-                                </Link>
-                            </label>
-                        </div>
-                    </div>
-                </div>
                 <div>
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="flex w-full justify-center rounded-md border border-transparent bg-primary-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50"
-                    >
-                        {loading ? 'Creating account...' : 'Create account'}
-                    </button>
+                    <label className="block text-xs font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                        Password *
+                    </label>
+                    <input
+                        type="password"
+                        required
+                        minLength={6}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="At least 6 characters"
+                        className="block w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm focus:border-[#1E4E8C] focus:outline-none focus:ring-1 focus:ring-[#1E4E8C]"
+                    />
                 </div>
+
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full flex items-center justify-center py-3 px-4 rounded-xl bg-[#D4A017] text-white text-sm font-bold hover:bg-[#A9790A] transition-all shadow-md shadow-amber-200 disabled:opacity-50"
+                >
+                    {loading ? 'Creating Account...' : 'Create Account & Add Child'}
+                </button>
             </form>
 
-            <SSOButtons onError={setError}/>
-
-            <div className="mt-6 text-center text-sm">
-                <span className="text-gray-600">Already have an account?</span>
-                {' '}
-                <Link href="/auth/login" className="font-medium text-primary-600 hover:text-primary-500">
-                    Sign in
+            <div className="text-center text-xs text-[#6B7280]">
+                <span>Already registered? </span>
+                <Link href="/auth/login" className="font-bold text-[#1E4E8C] hover:underline">
+                    Sign in here
                 </Link>
             </div>
         </div>

@@ -1,167 +1,232 @@
-"use client";
+'use client';
+
 import React, { useState } from 'react';
 import Link from 'next/link';
-import {usePathname, useRouter} from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
-    Home,
-    User,
+    BookOpen,
+    Users,
+    Calendar,
+    Award,
+    FileText,
+    CreditCard,
+    MessageSquare,
+    Mail,
     Menu,
     X,
-    ChevronDown,
     LogOut,
-    Key, Files, LucideListTodo,
+    Home,
+    UserCheck
 } from 'lucide-react';
-import { useGlobal } from "@/lib/context/GlobalContext";
-import { createSPASassClient } from "@/lib/supabase/client";
+import { useGlobal } from '@/lib/context/GlobalContext';
+import { createSPAClient } from '@/lib/supabase/client';
+import { EYTService } from '@/lib/eyt-service';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const [isSidebarOpen, setSidebarOpen] = useState(false);
-    const [isUserDropdownOpen, setUserDropdownOpen] = useState(false);
     const pathname = usePathname();
     const router = useRouter();
 
-
-    const { user } = useGlobal();
+    const { profile, setRole } = useGlobal();
+    const isOwner = profile?.role === 'owner';
 
     const handleLogout = async () => {
         try {
-            const client = await createSPASassClient();
-            await client.logout();
+            if (EYTService.isSupabaseConfigured()) {
+                const client = createSPAClient();
+                await client.auth.signOut();
+            }
         } catch (error) {
-            console.error('Error logging out:', error);
+            console.error('Logout error:', error);
+        }
+        router.push('/');
+    };
+
+    const toggleRole = () => {
+        if (isOwner) {
+            setRole('parent');
+        } else {
+            setRole('owner');
         }
     };
-    const handleChangePassword = async () => {
-        router.push('/app/user-settings')
-    };
 
-    const getInitials = (email: string) => {
-        const parts = email.split('@')[0].split(/[._-]/);
-        return parts.length > 1
-            ? (parts[0][0] + parts[1][0]).toUpperCase()
-            : parts[0].slice(0, 2).toUpperCase();
-    };
-
-    const productName = process.env.NEXT_PUBLIC_PRODUCTNAME;
-
-    const navigation = [
-        { name: 'Homepage', href: '/app', icon: Home },
-        { name: 'Example Storage', href: '/app/storage', icon: Files },
-        { name: 'Example Table', href: '/app/table', icon: LucideListTodo },
-        { name: 'User Settings', href: '/app/user-settings', icon: User },
+    // Navigation items tailored to roles
+    const parentNav = [
+        { name: 'Dashboard Overview', href: '/app', icon: Home },
+        { name: 'My Children', href: '/app/children', icon: Users },
+        { name: 'Book Session / Schedule', href: '/app/schedule', icon: Calendar },
+        { name: 'Milestones & Progress', href: '/app/milestones', icon: Award },
+        { name: 'Learning Resources', href: '/app/resources', icon: FileText },
+        { name: 'Invoices & Receipts', href: '/app/invoices', icon: CreditCard },
+        { name: 'Messages', href: '/app/messages', icon: MessageSquare },
     ];
 
-    const toggleSidebar = () => setSidebarOpen(!isSidebarOpen);
+    const ownerNav = [
+        { name: 'Tutor Overview', href: '/app', icon: Home },
+        { name: 'Student Directory', href: '/app/children', icon: Users },
+        { name: 'Schedule & Slots', href: '/app/schedule', icon: Calendar },
+        { name: 'Milestone Tracking', href: '/app/milestones', icon: Award },
+        { name: 'Resource Library', href: '/app/resources', icon: FileText },
+        { name: 'Enquiry Inbox', href: '/app/enquiries', icon: Mail },
+        { name: 'Invoices & Payments', href: '/app/invoices', icon: CreditCard },
+        { name: 'Parent Messages', href: '/app/messages', icon: MessageSquare },
+    ];
+
+    const navItems = isOwner ? ownerNav : parentNav;
 
     return (
-        <div className="min-h-screen bg-gray-100">
+        <div className="min-h-screen bg-[#F3F7FD]/40 text-[#14263F]">
+            {/* Mobile backdrop */}
             {isSidebarOpen && (
                 <div
-                    className="fixed inset-0 bg-gray-600 bg-opacity-75 z-20 lg:hidden"
-                    onClick={toggleSidebar}
+                    className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+                    onClick={() => setSidebarOpen(false)}
                 />
             )}
 
             {/* Sidebar */}
-            <div className={`fixed inset-y-0 left-0 w-64 bg-white shadow-lg transform transition-transform duration-200 ease-in-out z-30 
-                ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+            <aside
+                className={`fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-200 shadow-lg transform transition-transform duration-200 ease-in-out z-40 ${
+                    isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+                } lg:translate-x-0 flex flex-col justify-between`}
+            >
+                <div>
+                    {/* Brand Header */}
+                    <div className="h-20 flex items-center justify-between px-5 border-b border-gray-100 bg-[#1E4E8C] text-white">
+                        <Link href="/" className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white border border-[#D4A017]">
+                                <BookOpen className="w-5 h-5 text-[#D4A017]" />
+                            </div>
+                            <div>
+                                <h1 className="font-heading font-bold text-base text-white leading-tight">
+                                    Mrs Sarah
+                                </h1>
+                                <p className="text-[11px] text-[#D4A017] font-medium">
+                                    {isOwner ? 'Owner / Tutor Hub' : 'Parent Portal'}
+                                </p>
+                            </div>
+                        </Link>
+                        <button
+                            onClick={() => setSidebarOpen(false)}
+                            className="lg:hidden text-white/80 hover:text-white"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
 
-                <div className="h-16 flex items-center justify-between px-4 border-b">
-                    <span className="text-xl font-semibold text-primary-600">{productName}</span>
-                    <button
-                        onClick={toggleSidebar}
-                        className="lg:hidden text-gray-500 hover:text-gray-700"
-                    >
-                        <X className="h-6 w-6" />
-                    </button>
+                    {/* Role Indicator Ribbon */}
+                    <div className="p-3 bg-[#E8F0FA] border-b border-[#C7DAF3]/60 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5 font-semibold text-[#1E4E8C]">
+                            <UserCheck className="w-3.5 h-3.5 text-[#D4A017]" />
+                            <span>Role: <strong className="capitalize text-[#1E4E8C]">{profile?.role || 'Parent'}</strong></span>
+                        </div>
+                        <button
+                            onClick={toggleRole}
+                            className="text-[11px] font-bold text-[#D4A017] hover:underline"
+                            title="Switch view between Parent and Owner"
+                        >
+                            Toggle View
+                        </button>
+                    </div>
+
+                    {/* Nav Links */}
+                    <nav className="p-3 space-y-1">
+                        {navItems.map((item) => {
+                            const Icon = item.icon;
+                            const isActive = pathname === item.href;
+                            return (
+                                <Link
+                                    key={item.name}
+                                    href={item.href}
+                                    onClick={() => setSidebarOpen(false)}
+                                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                                        isActive
+                                            ? 'bg-[#1E4E8C] text-white shadow-sm'
+                                            : 'text-[#14263F] hover:bg-[#E8F0FA] hover:text-[#1E4E8C]'
+                                    }`}
+                                >
+                                    <Icon className={`w-4 h-4 ${isActive ? 'text-[#D4A017]' : 'text-[#6B7280]'}`} />
+                                    <span>{item.name}</span>
+                                </Link>
+                            );
+                        })}
+                    </nav>
                 </div>
 
-                {/* Navigation */}
-                <nav className="mt-4 px-2 space-y-1">
-                    {navigation.map((item) => {
-                        const isActive = pathname === item.href;
-                        return (
-                            <Link
-                                key={item.name}
-                                href={item.href}
-                                className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
-                                    isActive
-                                        ? 'bg-primary-50 text-primary-600'
-                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                                }`}
-                            >
-                                <item.icon
-                                    className={`mr-3 h-5 w-5 ${
-                                        isActive ? 'text-primary-500' : 'text-gray-400 group-hover:text-gray-500'
-                                    }`}
-                                />
-                                {item.name}
-                            </Link>
-                        );
-                    })}
-                </nav>
+                {/* Bottom user profile & back link */}
+                <div className="p-4 border-t border-gray-100 bg-[#FCFBF7] space-y-3">
+                    <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-[#1E4E8C] text-[#D4A017] flex items-center justify-center font-bold text-xs border border-[#D4A017]">
+                            {profile?.full_name?.charAt(0) || 'U'}
+                        </div>
+                        <div className="overflow-hidden">
+                            <p className="text-xs font-bold text-[#14263F] truncate">
+                                {profile?.full_name || 'User'}
+                            </p>
+                            <p className="text-[11px] text-[#6B7280] truncate">
+                                {profile?.email}
+                            </p>
+                        </div>
+                    </div>
 
-            </div>
-
-            <div className="lg:pl-64">
-                <div className="sticky top-0 z-10 flex items-center justify-between h-16 bg-white shadow-sm px-4">
-                    <button
-                        onClick={toggleSidebar}
-                        className="lg:hidden text-gray-500 hover:text-gray-700"
-                    >
-                        <Menu className="h-6 w-6"/>
-                    </button>
-
-                    <div className="relative ml-auto">
-                        <button
-                            onClick={() => setUserDropdownOpen(!isUserDropdownOpen)}
-                            className="flex items-center space-x-2 text-sm text-gray-700 hover:text-gray-900"
+                    <div className="flex items-center justify-between pt-1 text-xs">
+                        <Link
+                            href="/"
+                            className="font-semibold text-[#1E4E8C] hover:underline"
                         >
-                            <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
-                                <span className="text-primary-700 font-medium">
-                                    {user ? getInitials(user.email) : '??'}
-                                </span>
-                            </div>
-                            <span>{user?.email || 'Loading...'}</span>
-                            <ChevronDown className="h-4 w-4"/>
+                            ← Public Website
+                        </Link>
+                        <button
+                            onClick={handleLogout}
+                            className="flex items-center gap-1 text-red-600 hover:text-red-800 font-semibold"
+                        >
+                            <LogOut className="w-3.5 h-3.5" />
+                            Sign Out
                         </button>
-
-                        {isUserDropdownOpen && (
-                            <div className="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg border">
-                                <div className="p-2 border-b border-gray-100">
-                                    <p className="text-xs text-gray-500">Signed in as</p>
-                                    <p className="text-sm font-medium text-gray-900 truncate">
-                                        {user?.email}
-                                    </p>
-                                </div>
-                                <div className="py-1">
-                                    <button
-                                        onClick={() => {
-                                            setUserDropdownOpen(false);
-                                            handleChangePassword()
-                                        }}
-                                        className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                                    >
-                                        <Key className="mr-3 h-4 w-4 text-gray-400"/>
-                                        Change Password
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            handleLogout();
-                                            setUserDropdownOpen(false);
-                                        }}
-                                        className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                                    >
-                                        <LogOut className="mr-3 h-4 w-4 text-red-400"/>
-                                        Sign Out
-                                    </button>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
+            </aside>
 
-                <main className="p-4">
+            {/* Main Content Area */}
+            <div className="lg:pl-64 flex flex-col min-h-screen">
+                {/* Top bar */}
+                <header className="h-16 bg-white border-b border-gray-200 sticky top-0 z-20 flex items-center justify-between px-4 sm:px-8">
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setSidebarOpen(true)}
+                            className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 lg:hidden"
+                        >
+                            <Menu className="w-5 h-5" />
+                        </button>
+                        <div>
+                            <span className="text-xs font-semibold uppercase tracking-wider text-[#6B7280]">
+                                {isOwner ? "Owner Administration" : "Parent Family Portal"}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        {/* Quick Role Switcher Button */}
+                        <button
+                            onClick={toggleRole}
+                            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border border-[#C7DAF3] bg-[#E8F0FA] text-[#1E4E8C] hover:bg-[#d8e6f7] transition-all"
+                        >
+                            <UserCheck className="w-3.5 h-3.5 text-[#D4A017]" />
+                            <span className="hidden sm:inline">Switch Mode:</span>
+                            <span className="text-[#D4A017]">{isOwner ? 'Mrs Sarah' : 'Parent'}</span>
+                        </button>
+
+                        <Link
+                            href="/"
+                            className="hidden sm:flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg bg-white border border-gray-300 text-[#14263F] hover:bg-gray-50 transition-all"
+                        >
+                            Public Site
+                        </Link>
+                    </div>
+                </header>
+
+                {/* Dashboard Page Content */}
+                <main className="flex-1 p-4 sm:p-6 lg:p-8">
                     {children}
                 </main>
             </div>

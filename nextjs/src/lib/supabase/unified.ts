@@ -1,20 +1,18 @@
-import {SupabaseClient} from "@supabase/supabase-js";
-import {Database} from "@/lib/types";
+import { SupabaseClient } from "@supabase/supabase-js";
+import { Database } from "@/lib/types";
 
 export enum ClientType {
     SERVER = 'server',
     SPA = 'spa'
-
 }
 
 export class SassClient {
-    private client: SupabaseClient<Database, "public", "public">;
+    private client: SupabaseClient<Database>;
     private clientType: ClientType;
 
-    constructor(client: SupabaseClient<Database, "public", "public">, clientType: ClientType) {
+    constructor(client: SupabaseClient<Database>, clientType: ClientType) {
         this.client = client;
         this.clientType = clientType;
-
     }
 
     async loginEmail(email: string, password: string) {
@@ -39,7 +37,7 @@ export class SassClient {
         return this.client.auth.resend({
             email: email,
             type: 'signup'
-        })
+        });
     }
 
     async logout() {
@@ -47,57 +45,40 @@ export class SassClient {
             scope: 'local',
         });
         if (error) throw error;
-        if(this.clientType === ClientType.SPA) {
+        if (this.clientType === ClientType.SPA) {
             window.location.href = '/auth/login';
         }
     }
 
-    async uploadFile(myId: string, filename: string, file: File) {
+    async uploadFile(bucket: string, filename: string, file: File) {
         filename = filename.replace(/[^0-9a-zA-Z!\-_.*'()]/g, '_');
-        filename = myId + "/" + filename
-        return this.client.storage.from('files').upload(filename, file);
+        return this.client.storage.from(bucket).upload(filename, file);
     }
 
-    async getFiles(myId: string) {
-        return this.client.storage.from('files').list(myId)
+    async getFiles(bucket: string, path: string) {
+        return this.client.storage.from(bucket).list(path);
     }
 
-    async deleteFile(myId: string, filename: string) {
-        filename = myId + "/" + filename
-        return this.client.storage.from('files').remove([filename])
+    async deleteFile(bucket: string, path: string) {
+        return this.client.storage.from(bucket).remove([path]);
     }
 
-    async shareFile(myId: string, filename: string, timeInSec: number, forDownload: boolean = false) {
-        filename = myId + "/" + filename
-        return this.client.storage.from('files').createSignedUrl(filename, timeInSec, {
-            download: forDownload
-        });
-
+    // Children
+    async getChildren() {
+        return this.client.from('children').select('*');
     }
 
-    async getMyTodoList(page: number = 1, pageSize: number = 100, order: string = 'created_at', done: boolean | null = false) {
-        let query = this.client.from('todo_list').select('*').range(page * pageSize - pageSize, page * pageSize - 1).order(order)
-        if (done !== null) {
-            query = query.eq('done', done)
-        }
-        return query
+    // Bookings
+    async getBookings() {
+        return this.client.from('bookings').select('*');
     }
 
-    async createTask(row: Database["public"]["Tables"]["todo_list"]["Insert"]) {
-        return this.client.from('todo_list').insert(row)
-    }
-
-    async removeTask (id: number) {
-        return this.client.from('todo_list').delete().eq('id', id)
-    }
-
-    async updateAsDone (id: number) {
-        return this.client.from('todo_list').update({done: true}).eq('id', id)
+    // Enquiries
+    async getEnquiries() {
+        return this.client.from('enquiries').select('*');
     }
 
     getSupabaseClient() {
         return this.client;
     }
-
-
 }

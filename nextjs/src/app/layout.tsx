@@ -1,13 +1,39 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { Fraunces, Karla } from "next/font/google";
 import "./globals.css";
-import { Analytics } from '@vercel/analytics/next';
-import CookieConsent from "@/components/Cookies";
-import { GoogleAnalytics } from '@next/third-parties/google'
 
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  display: "swap",
+});
+
+const karla = Karla({
+  subsets: ["latin"],
+  variable: "--font-karla",
+  display: "swap",
+});
+
+export const viewport: Viewport = {
+  themeColor: "#1E4E8C",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
 
 export const metadata: Metadata = {
-  title: process.env.NEXT_PUBLIC_PRODUCTNAME,
-  description: "The best way to build your SaaS product.",
+  title: "Mrs Sarah — Early Years Tutor | Montessori & British Curriculum (Ages 3–8)",
+  description: "Engaging, child-centered online & home tutorials for children ages 3–8. Montessori-trained, SEN-inclusive early years education.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Mrs Sarah Tutoring",
+  },
+  icons: {
+    icon: "/icons/icon-192x192.png",
+    apple: "/icons/icon-192x192.png",
+  },
 };
 
 export default function RootLayout({
@@ -15,22 +41,34 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  let theme = process.env.NEXT_PUBLIC_THEME
-  if(!theme) {
-    theme = "theme-sass3"
-  }
-  const gaID = process.env.NEXT_PUBLIC_GOOGLE_TAG;
   return (
-    <html lang="en">
-    <body className={theme}>
-      {children}
-      <Analytics />
-      <CookieConsent />
-      { gaID && (
-          <GoogleAnalytics gaId={gaID}/>
-      )}
-
-    </body>
+    <html lang="en" className={`${fraunces.variable} ${karla.variable}`}>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#1E4E8C" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+      </head>
+      <body className="font-body bg-white text-[#14263F] min-h-screen antialiased selection:bg-[#E8F0FA] selection:text-[#1E4E8C]">
+        {children}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').then(
+                    function(registration) {
+                      console.log('EYT ServiceWorker registration successful:', registration.scope);
+                    },
+                    function(err) {
+                      console.log('EYT ServiceWorker registration failed:', err);
+                    }
+                  );
+                });
+              }
+            `,
+          }}
+        />
+      </body>
     </html>
   );
 }
