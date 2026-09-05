@@ -8,7 +8,7 @@ export type Json =
 
 export type UserRole = 'owner' | 'tutor' | 'parent';
 export type LessonMode = 'online' | 'home';
-export type BookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
+export type BookingStatus = 'pending' | 'confirmed' | 'completed' | 'no_show' | 'cancelled';
 export type MilestoneStatus = 'not_started' | 'in_progress' | 'achieved';
 export type SubjectArea = 'literacy' | 'numeracy' | 'practical_life' | 'cultural' | 'arts';
 export type InvoiceStatus = 'unpaid' | 'payment_submitted' | 'paid' | 'cancelled';

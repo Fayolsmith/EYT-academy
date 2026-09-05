@@ -46,6 +46,33 @@ export interface Booking {
   created_at: string;
   child_name?: string;
   parent_name?: string;
+  parent_email?: string;
+  parent_profile_id?: string;
+  // Phase 2 scope additions:
+  recurring_group_id?: string | null;
+  is_recurring?: boolean;
+  recurrence_rule?: string | null; // e.g. 'weekly'
+  recurrence_index?: number | null; // e.g. 1
+  recurrence_total?: number | null; // e.g. 4
+  attendance_notes?: string | null;
+  attendance_recorded_at?: string | null;
+  is_billable?: boolean;
+  reminder_sent_at?: string | null;
+}
+
+export interface SessionReminderNotification {
+  id: string;
+  booking_id: string;
+  recipient_email: string;
+  recipient_name: string;
+  child_name: string;
+  start_time: string;
+  end_time: string;
+  mode: LessonMode;
+  meeting_link: string | null;
+  home_address: string | null;
+  sent_at: string;
+  status: 'sent' | 'delivered';
 }
 
 export interface SessionNote {
@@ -355,6 +382,148 @@ const DEFAULT_BOOKINGS: Booking[] = [
     created_at: new Date().toISOString(),
     child_name: 'Leo Adeleke',
     parent_name: 'Mrs Elizabeth Adeleke',
+    parent_email: 'elizabeth@example.com',
+    parent_profile_id: 'parent-demo-id',
+    is_recurring: false,
+    is_billable: true,
+  },
+  {
+    id: 'book-rec-1',
+    slot_id: null,
+    child_id: 'child-1',
+    tutor_id: 'tutor-sarah-id',
+    mode: 'online',
+    meeting_link: 'https://meet.google.com/sarah-tuesday-series',
+    home_address: null,
+    status: 'completed',
+    start_time: new Date(Date.now() - 86400000 * 7 + 3600000 * 16).toISOString(), // 1 week ago
+    end_time: new Date(Date.now() - 86400000 * 7 + 3600000 * 17).toISOString(),
+    notes: 'Weekly Tuesday Tutoring Slot (Week 1 of 4)',
+    created_at: new Date(Date.now() - 86400000 * 10).toISOString(),
+    child_name: 'Leo Adeleke',
+    parent_name: 'Mrs Elizabeth Adeleke',
+    parent_email: 'elizabeth@example.com',
+    parent_profile_id: 'parent-demo-id',
+    recurring_group_id: 'rec-group-tue-4pm',
+    is_recurring: true,
+    recurrence_rule: 'weekly',
+    recurrence_index: 1,
+    recurrence_total: 4,
+    attendance_notes: 'Attended & completed on time. Demonstrated mastery in vowel blending cards.',
+    attendance_recorded_at: new Date(Date.now() - 86400000 * 7 + 3600000 * 18).toISOString(),
+    is_billable: true,
+  },
+  {
+    id: 'book-rec-2',
+    slot_id: null,
+    child_id: 'child-1',
+    tutor_id: 'tutor-sarah-id',
+    mode: 'online',
+    meeting_link: 'https://meet.google.com/sarah-tuesday-series',
+    home_address: null,
+    status: 'confirmed',
+    start_time: new Date(Date.now() + 86400000 * 2 + 3600000 * 16).toISOString(), // In 2 days
+    end_time: new Date(Date.now() + 86400000 * 2 + 3600000 * 17).toISOString(),
+    notes: 'Weekly Tuesday Tutoring Slot (Week 2 of 4)',
+    created_at: new Date(Date.now() - 86400000 * 10).toISOString(),
+    child_name: 'Leo Adeleke',
+    parent_name: 'Mrs Elizabeth Adeleke',
+    parent_email: 'elizabeth@example.com',
+    parent_profile_id: 'parent-demo-id',
+    recurring_group_id: 'rec-group-tue-4pm',
+    is_recurring: true,
+    recurrence_rule: 'weekly',
+    recurrence_index: 2,
+    recurrence_total: 4,
+    is_billable: true,
+  },
+  {
+    id: 'book-rec-3',
+    slot_id: null,
+    child_id: 'child-1',
+    tutor_id: 'tutor-sarah-id',
+    mode: 'online',
+    meeting_link: 'https://meet.google.com/sarah-tuesday-series',
+    home_address: null,
+    status: 'confirmed',
+    start_time: new Date(Date.now() + 86400000 * 9 + 3600000 * 16).toISOString(), // In 9 days
+    end_time: new Date(Date.now() + 86400000 * 9 + 3600000 * 17).toISOString(),
+    notes: 'Weekly Tuesday Tutoring Slot (Week 3 of 4)',
+    created_at: new Date(Date.now() - 86400000 * 10).toISOString(),
+    child_name: 'Leo Adeleke',
+    parent_name: 'Mrs Elizabeth Adeleke',
+    parent_email: 'elizabeth@example.com',
+    parent_profile_id: 'parent-demo-id',
+    recurring_group_id: 'rec-group-tue-4pm',
+    is_recurring: true,
+    recurrence_rule: 'weekly',
+    recurrence_index: 3,
+    recurrence_total: 4,
+    is_billable: true,
+  },
+  {
+    id: 'book-rec-4',
+    slot_id: null,
+    child_id: 'child-1',
+    tutor_id: 'tutor-sarah-id',
+    mode: 'online',
+    meeting_link: 'https://meet.google.com/sarah-tuesday-series',
+    home_address: null,
+    status: 'confirmed',
+    start_time: new Date(Date.now() + 86400000 * 16 + 3600000 * 16).toISOString(), // In 16 days
+    end_time: new Date(Date.now() + 86400000 * 16 + 3600000 * 17).toISOString(),
+    notes: 'Weekly Tuesday Tutoring Slot (Week 4 of 4)',
+    created_at: new Date(Date.now() - 86400000 * 10).toISOString(),
+    child_name: 'Leo Adeleke',
+    parent_name: 'Mrs Elizabeth Adeleke',
+    parent_email: 'elizabeth@example.com',
+    parent_profile_id: 'parent-demo-id',
+    recurring_group_id: 'rec-group-tue-4pm',
+    is_recurring: true,
+    recurrence_rule: 'weekly',
+    recurrence_index: 4,
+    recurrence_total: 4,
+    is_billable: true,
+  },
+  {
+    id: 'book-past-noshow',
+    slot_id: null,
+    child_id: 'child-1',
+    tutor_id: 'tutor-sarah-id',
+    mode: 'online',
+    meeting_link: 'https://meet.google.com/sample-room',
+    home_address: null,
+    status: 'no_show',
+    start_time: new Date(Date.now() - 86400000 * 3 + 3600000 * 11).toISOString(),
+    end_time: new Date(Date.now() - 86400000 * 3 + 3600000 * 12).toISOString(),
+    notes: 'Introductory early math evaluation',
+    created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
+    child_name: 'Leo Adeleke',
+    parent_name: 'Mrs Elizabeth Adeleke',
+    parent_email: 'elizabeth@example.com',
+    parent_profile_id: 'parent-demo-id',
+    attendance_notes: 'Learner did not connect to lesson call without prior notice. Marked as No-Show; billable under policy.',
+    attendance_recorded_at: new Date(Date.now() - 86400000 * 3 + 3600000 * 13).toISOString(),
+    is_billable: true,
+  },
+  {
+    id: 'book-past-cancelled',
+    slot_id: null,
+    child_id: 'child-2',
+    tutor_id: 'tutor-sarah-id',
+    mode: 'home',
+    meeting_link: null,
+    home_address: '14 Admiralty Way, Lekki Phase 1, Lagos',
+    status: 'cancelled',
+    start_time: new Date(Date.now() - 86400000 * 5 + 3600000 * 14).toISOString(),
+    end_time: new Date(Date.now() - 86400000 * 5 + 3600000 * 15).toISOString(),
+    notes: 'Fine motor coordination session [Cancellation: 48hr advance parent notice for family event]',
+    created_at: new Date(Date.now() - 86400000 * 8).toISOString(),
+    child_name: 'Amara Adeleke',
+    parent_name: 'Mrs Elizabeth Adeleke',
+    parent_email: 'elizabeth@example.com',
+    parent_profile_id: 'parent-demo-id',
+    is_billable: false,
   },
 ];
 
@@ -927,14 +1096,29 @@ export const EYTService = {
   },
 
   // ------------------------------------------------
-  // BOOKINGS
+  // BOOKINGS & PHASE 2 BOOKING ENGINE
   // ------------------------------------------------
   getBookings(childId?: string): Booking[] {
     const bookings = storage.get<Booking[]>('bookings', DEFAULT_BOOKINGS);
-    if (childId) {
-      return bookings.filter((b) => b.child_id === childId);
+    const currentUser = this.getCurrentUser();
+
+    let list = bookings;
+    // Non-owner (parent) only sees their own family bookings
+    if (currentUser.role !== 'owner') {
+      const parentChildren = this.getChildren(currentUser.id).map((c) => c.id);
+      const currentEmail = currentUser.email?.toLowerCase().trim();
+      list = bookings.filter(
+        (b) =>
+          parentChildren.includes(b.child_id) ||
+          b.parent_profile_id === currentUser.id ||
+          (currentEmail && b.parent_email?.toLowerCase().trim() === currentEmail)
+      );
     }
-    return bookings;
+
+    if (childId) {
+      return list.filter((b) => b.child_id === childId);
+    }
+    return list;
   },
 
   createBooking(data: {
@@ -945,8 +1129,13 @@ export const EYTService = {
     endTime: string;
     homeAddress?: string;
     notes?: string;
+    meetingLink?: string;
+    isRecurring?: boolean;
+    recurringGroupId?: string;
+    recurrenceIndex?: number;
+    recurrenceTotal?: number;
   }): Booking {
-    const bookings = this.getBookings();
+    const allBookings = storage.get<Booking[]>('bookings', DEFAULT_BOOKINGS);
     const children = this.getChildren();
     const child = children.find((c) => c.id === data.childId);
     const currentUser = this.getCurrentUser();
@@ -962,12 +1151,15 @@ export const EYTService = {
     }
 
     const newBooking: Booking = {
-      id: `book-${Date.now()}`,
+      id: `book-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       slot_id: data.slotId || null,
       child_id: data.childId,
       tutor_id: 'tutor-sarah-id',
       mode: data.mode,
-      meeting_link: data.mode === 'online' ? 'https://meet.google.com/sarah-eyt-room' : null,
+      meeting_link:
+        data.mode === 'online'
+          ? (data.meetingLink || 'https://meet.google.com/sarah-eyt-room')
+          : null,
       home_address: data.homeAddress || null,
       status: 'confirmed',
       start_time: data.startTime,
@@ -975,24 +1167,273 @@ export const EYTService = {
       notes: data.notes || null,
       created_at: new Date().toISOString(),
       child_name: child?.name || 'Child',
-      parent_name: currentUser.full_name,
+      parent_name: child?.parent_name || currentUser.full_name,
+      parent_email: child?.parent_email || currentUser.email,
+      parent_profile_id: child?.parent_profile_id || currentUser.id,
+      is_recurring: Boolean(data.isRecurring),
+      recurring_group_id: data.recurringGroupId || null,
+      recurrence_rule: data.isRecurring ? 'weekly' : null,
+      recurrence_index: data.recurrenceIndex || null,
+      recurrence_total: data.recurrenceTotal || null,
+      is_billable: true,
     };
 
-    bookings.push(newBooking);
-    storage.set('bookings', bookings);
+    allBookings.push(newBooking);
+    storage.set('bookings', allBookings);
     return newBooking;
   },
 
+  /**
+   * Phase 2 Scope: Recurring/Repeat Session Booking.
+   * Books an ongoing weekly slot across N weeks.
+   * Generates INDIVIDUAL booking records under the hood so each session
+   * can still be individually rescheduled, cancelled, or marked attended.
+   */
+  createRecurringBooking(data: {
+    slotId?: string;
+    childId: string;
+    mode: LessonMode;
+    startTime: string; // ISO string for first occurrence
+    endTime: string;   // ISO string for first occurrence
+    weeksCount: number; // e.g. 4, 8, 12 weeks
+    homeAddress?: string;
+    notes?: string;
+    meetingLink?: string;
+  }): Booking[] {
+    const weeks = Math.max(1, Math.min(data.weeksCount || 4, 24));
+    const recurringGroupId = `rec-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const createdList: Booking[] = [];
+    const allBookings = storage.get<Booking[]>('bookings', DEFAULT_BOOKINGS);
+    const children = this.getChildren();
+    const child = children.find((c) => c.id === data.childId);
+    const currentUser = this.getCurrentUser();
+
+    const baseStart = new Date(data.startTime);
+    const baseEnd = new Date(data.endTime);
+    const durationMs = baseEnd.getTime() - baseStart.getTime();
+
+    // Mark first slot as booked if slotId provided
+    if (data.slotId) {
+      const slots = this.getSlots();
+      const slot = slots.find((s) => s.id === data.slotId);
+      if (slot) {
+        slot.is_booked = true;
+        storage.set('slots', slots);
+      }
+    }
+
+    for (let i = 0; i < weeks; i++) {
+      const sessionStart = new Date(baseStart.getTime() + i * 7 * 24 * 60 * 60 * 1000);
+      const sessionEnd = new Date(sessionStart.getTime() + durationMs);
+
+      const bookingItem: Booking = {
+        id: `book-${Date.now()}-${i + 1}`,
+        slot_id: i === 0 ? (data.slotId || null) : null,
+        child_id: data.childId,
+        tutor_id: 'tutor-sarah-id',
+        mode: data.mode,
+        meeting_link:
+          data.mode === 'online'
+            ? (data.meetingLink || 'https://meet.google.com/sarah-eyt-room')
+            : null,
+        home_address: data.homeAddress || null,
+        status: 'confirmed',
+        start_time: sessionStart.toISOString(),
+        end_time: sessionEnd.toISOString(),
+        notes: data.notes
+          ? `${data.notes} (Week ${i + 1} of ${weeks})`
+          : `Weekly session (Week ${i + 1} of ${weeks})`,
+        created_at: new Date().toISOString(),
+        child_name: child?.name || 'Child',
+        parent_name: child?.parent_name || currentUser.full_name,
+        parent_email: child?.parent_email || currentUser.email,
+        parent_profile_id: child?.parent_profile_id || currentUser.id,
+        recurring_group_id: recurringGroupId,
+        is_recurring: true,
+        recurrence_rule: 'weekly',
+        recurrence_index: i + 1,
+        recurrence_total: weeks,
+        is_billable: true,
+      };
+
+      allBookings.push(bookingItem);
+      createdList.push(bookingItem);
+    }
+
+    storage.set('bookings', allBookings);
+    return createdList;
+  },
+
+  /**
+   * Phase 2 Scope: Attendance Tracking.
+   * Sarah sets status per session: 'completed', 'no_show', or 'cancelled'.
+   * Configurable billable flag: 'no_show' is billable per policy, 'cancelled' is typically not.
+   */
+  recordAttendance(
+    bookingId: string,
+    attendance: 'completed' | 'no_show' | 'cancelled',
+    options?: {
+      attendanceNotes?: string;
+      isBillable?: boolean;
+    }
+  ): Booking | null {
+    const currentUser = this.getCurrentUser();
+    if (currentUser.role !== 'owner') {
+      throw new Error('[SECURITY VIOLATION] Only Mrs Sarah can record session attendance.');
+    }
+
+    const bookings = storage.get<Booking[]>('bookings', DEFAULT_BOOKINGS);
+    const idx = bookings.findIndex((b) => b.id === bookingId);
+    if (idx === -1) return null;
+
+    const defaultBillable = attendance === 'completed' || attendance === 'no_show';
+    const finalBillable = options?.isBillable !== undefined ? options.isBillable : defaultBillable;
+
+    bookings[idx] = {
+      ...bookings[idx],
+      status: attendance,
+      attendance_notes: options?.attendanceNotes || bookings[idx].attendance_notes || null,
+      attendance_recorded_at: new Date().toISOString(),
+      is_billable: finalBillable,
+    };
+
+    storage.set('bookings', bookings);
+    return bookings[idx];
+  },
+
+  /**
+   * Reschedules an INDIVIDUAL booking occurrence.
+   * If part of a recurring series, DOES NOT affect any other session in the series.
+   */
+  rescheduleBooking(
+    bookingId: string,
+    newStartTime: string,
+    newEndTime: string,
+    newMeetingLink?: string
+  ): Booking | null {
+    const bookings = storage.get<Booking[]>('bookings', DEFAULT_BOOKINGS);
+    const idx = bookings.findIndex((b) => b.id === bookingId);
+    if (idx === -1) return null;
+
+    bookings[idx] = {
+      ...bookings[idx],
+      start_time: newStartTime,
+      end_time: newEndTime,
+      meeting_link: newMeetingLink !== undefined ? newMeetingLink : bookings[idx].meeting_link,
+      status: 'confirmed',
+      reminder_sent_at: null, // Reset reminder for the new time
+    };
+
+    storage.set('bookings', bookings);
+    return bookings[idx];
+  },
+
+  /**
+   * Cancels an INDIVIDUAL booking occurrence.
+   * Does not cancel or modify the rest of the recurring series.
+   */
+  cancelBooking(bookingId: string, reason?: string): Booking | null {
+    const bookings = storage.get<Booking[]>('bookings', DEFAULT_BOOKINGS);
+    const idx = bookings.findIndex((b) => b.id === bookingId);
+    if (idx === -1) return null;
+
+    bookings[idx] = {
+      ...bookings[idx],
+      status: 'cancelled',
+      is_billable: false,
+      notes: reason
+        ? `${bookings[idx].notes || ''} [Cancellation: ${reason}]`.trim()
+        : bookings[idx].notes,
+    };
+
+    storage.set('bookings', bookings);
+    return bookings[idx];
+  },
+
   updateBookingStatus(id: string, status: BookingStatus, meetingLink?: string): Booking | null {
-    const bookings = this.getBookings();
+    const bookings = storage.get<Booking[]>('bookings', DEFAULT_BOOKINGS);
     const idx = bookings.findIndex((b) => b.id === id);
     if (idx === -1) return null;
     bookings[idx].status = status;
     if (meetingLink !== undefined) {
       bookings[idx].meeting_link = meetingLink;
     }
+    if (status === 'completed' || status === 'no_show') {
+      bookings[idx].attendance_recorded_at = new Date().toISOString();
+      bookings[idx].is_billable = true;
+    } else if (status === 'cancelled') {
+      bookings[idx].is_billable = false;
+    }
     storage.set('bookings', bookings);
     return bookings[idx];
+  },
+
+  /**
+   * Phase 2 Scope: Automated Session Reminder Emails.
+   * Scans confirmed upcoming sessions within the reminder window (e.g. 24-48 hours ahead).
+   * Automatically dispatches reminder emails so Sarah never needs to manually remind.
+   */
+  checkAndDispatchReminders(hoursAhead: number = 48): SessionReminderNotification[] {
+    const bookings = storage.get<Booking[]>('bookings', DEFAULT_BOOKINGS);
+    const notifications = storage.get<SessionReminderNotification[]>('session_reminder_notifications', []);
+    const now = Date.now();
+    const thresholdMs = hoursAhead * 60 * 60 * 1000;
+    const dispatched: SessionReminderNotification[] = [];
+
+    const updatedBookings = bookings.map((b) => {
+      if (b.status === 'confirmed' && !b.reminder_sent_at) {
+        const sessionTime = new Date(b.start_time).getTime();
+        const diff = sessionTime - now;
+
+        if (diff > 0 && diff <= thresholdMs) {
+          const recipientEmail = b.parent_email || 'elizabeth@example.com';
+          const notif: SessionReminderNotification = {
+            id: `remind-${Date.now()}-${b.id}`,
+            booking_id: b.id,
+            recipient_email: recipientEmail,
+            recipient_name: b.parent_name || 'Parent',
+            child_name: b.child_name || 'Child',
+            start_time: b.start_time,
+            end_time: b.end_time,
+            mode: b.mode,
+            meeting_link: b.meeting_link,
+            home_address: b.home_address,
+            sent_at: new Date().toISOString(),
+            status: 'delivered',
+          };
+
+          notifications.unshift(notif);
+          dispatched.push(notif);
+
+          if (typeof window !== 'undefined') {
+            try {
+              fetch('/api/reminders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(notif),
+              }).catch(() => {});
+            } catch {}
+          }
+
+          return {
+            ...b,
+            reminder_sent_at: new Date().toISOString(),
+          };
+        }
+      }
+      return b;
+    });
+
+    if (dispatched.length > 0) {
+      storage.set('bookings', updatedBookings);
+      storage.set('session_reminder_notifications', notifications);
+    }
+
+    return dispatched;
+  },
+
+  getReminderNotifications(): SessionReminderNotification[] {
+    return storage.get<SessionReminderNotification[]>('session_reminder_notifications', []);
   },
 
   // ------------------------------------------------
