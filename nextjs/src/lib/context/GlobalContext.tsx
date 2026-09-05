@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { createSPAClient } from '@/lib/supabase/client';
 import { EYTService, UserProfile } from '@/lib/eyt-service';
 import { UserRole, Database } from '@/lib/types';
@@ -19,9 +19,11 @@ interface GlobalContextType {
     loading: boolean;
     user: User | null;
     profile: UserProfile | null;
+    isParentPreview: boolean;
     refreshUser: () => void;
     logout: () => Promise<void>;
-    setRole: (role: 'owner' | 'parent') => void;
+    previewAsParent: () => void;
+    exitParentPreview: () => void;
 }
 
 const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
@@ -29,9 +31,10 @@ const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
 export function GlobalProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState<User | null>(null);
-    const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [realProfile, setRealProfile] = useState<UserProfile | null>(null);
+    const [isParentPreview, setIsParentPreview] = useState(false);
 
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         setLoading(true);
         try {
             if (EYTService.isSupabaseConfigured()) {
@@ -63,7 +66,7 @@ export function GlobalProvider({ children }: { children: React.ReactNode }) {
                         full_name: currentProfile.full_name,
                         role: currentProfile.role,
                     });
-                    setProfile(currentProfile);
+                    setRealProfile(currentProfile);
                     return;
                 }
             }
@@ -78,22 +81,23 @@ export function GlobalProvider({ children }: { children: React.ReactNode }) {
                     full_name: localAuth.full_name,
                     role: localAuth.role,
                 });
-                setProfile(localAuth);
+                setRealProfile(localAuth);
             } else {
                 setUser(null);
-                setProfile(null);
+                setRealProfile(null);
             }
         } catch (error) {
             console.error('Error loading user data:', error);
             setUser(null);
-            setProfile(null);
+            setRealProfile(null);
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     const logout = async () => {
         setLoading(true);
+        setIsParentPreview(false);
         try {
             if (EYTService.isSupabaseConfigured()) {
                 const client = createSPAClient();
@@ -104,33 +108,25 @@ export function GlobalProvider({ children }: { children: React.ReactNode }) {
         } finally {
             EYTService.logout();
             setUser(null);
-            setProfile(null);
+            setRealProfile(null);
             setLoading(false);
         }
     };
 
-    const setRole = (role: 'owner' | 'parent') => {
-        if (role === 'owner') {
-            const updated = EYTService.switchToOwner();
-            setProfile(updated);
-            setUser({
-                email: updated.email,
-                id: updated.id,
-                registered_at: new Date(),
-                full_name: updated.full_name,
-                role: updated.role,
-            });
-        } else {
-            const updated = EYTService.switchToParent();
-            setProfile(updated);
-            setUser({
-                email: updated.email,
-                id: updated.id,
-                registered_at: new Date(),
-                full_name: updated.full_name,
-                role: updated.role,
-            });
+    /**
+     * Preview as Parent: STRICTLY restricted to authenticated Owner accounts (Mrs Sarah).
+     * A parent session can NEVER invoke this, and no reverse "preview as owner" exists.
+     */
+    const previewAsParent = () => {
+        if (realProfile?.role !== 'owner' && user?.role !== 'owner') {
+            console.error('[SECURITY AUDIT] Unauthorized attempt to invoke previewAsParent by non-owner session:', user?.email);
+            return;
         }
+        setIsParentPreview(true);
+    };
+
+    const exitParentPreview = () => {
+        setIsParentPreview(false);
     };
 
     useEffect(() => {
@@ -142,8 +138,9 @@ export function GlobalProvider({ children }: { children: React.ReactNode }) {
                 if (event === 'SIGNED_OUT' || !session) {
                     EYTService.logout();
                     setUser(null);
-                    setProfile(null);
-                } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                    setRealProfile(null);
+                    setIsParentPreview(false);
+                } else if (session) {
                     loadData();
                 }
             });
@@ -152,19 +149,41 @@ export function GlobalProvider({ children }: { children: React.ReactNode }) {
                 subscription.unsubscribe();
             };
         }
-    }, []);
+    }, [loadData]);
+
+    // When Owner activates parent preview, render simulated parent profile for QA
+    const effectiveProfile: UserProfile | null = realProfile
+        ? isParentPreview && realProfile.role === 'owner'
+            ? {
+                  ...realProfile,
+                  role: 'parent',
+                  full_name: `${realProfile.full_name} (Parent View QA)`,
+              }
+            : realProfile
+        : null;
 
     return (
-        <GlobalContext.Provider value={{ loading, user, profile, refreshUser: loadData, logout, setRole }}>
+        <GlobalContext.Provider
+            value={{
+                loading,
+                user,
+                profile: effectiveProfile,
+                isParentPreview,
+                refreshUser: loadData,
+                logout,
+                previewAsParent,
+                exitParentPreview,
+            }}
+        >
             {children}
         </GlobalContext.Provider>
     );
 }
 
-export const useGlobal = () => {
+export function useGlobal() {
     const context = useContext(GlobalContext);
     if (context === undefined) {
         throw new Error('useGlobal must be used within a GlobalProvider');
     }
     return context;
-};
+}

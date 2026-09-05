@@ -1,53 +1,41 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Mail } from 'lucide-react';
 import { useGlobal } from '@/lib/context/GlobalContext';
 import { EYTService, Enquiry } from '@/lib/eyt-service';
 
 export default function EnquiriesPage() {
-  const { profile } = useGlobal();
-  const isOwner = profile?.role === 'owner';
+  const router = useRouter();
+  const { profile, user, loading } = useGlobal();
+  const isOwner = profile?.role === 'owner' || user?.role === 'owner';
 
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
 
-  const loadEnquiries = () => {
-    setEnquiries(EYTService.getEnquiries());
-  };
-
   useEffect(() => {
-    loadEnquiries();
-  }, [profile]);
+    if (!loading) {
+      if (!isOwner) {
+        // Strict Security Guard: Parents cannot view the enquiries route
+        router.replace('/app');
+      } else {
+        setEnquiries(EYTService.getEnquiries());
+      }
+    }
+  }, [loading, isOwner, router]);
 
   const handleToggleStatus = (id: string, currentStatus: string) => {
     EYTService.updateEnquiryStatus(
       id,
       currentStatus === 'new' ? 'contacted' : 'new'
     );
-    loadEnquiries();
+    setEnquiries(EYTService.getEnquiries());
   };
 
-  if (!isOwner) {
+  if (loading || !isOwner) {
     return (
-      <div className="bg-white rounded-3xl p-10 max-w-xl mx-auto text-center border border-gray-200 space-y-4">
-        <div className="w-12 h-12 rounded-2xl bg-[#E8F0FA] flex items-center justify-center text-[#1E4E8C] mx-auto">
-          <Mail className="w-6 h-6 text-[#D4A017]" />
-        </div>
-        <h2 className="font-heading text-xl font-bold text-[#1E4E8C]">
-          Parent Contact Hub
-        </h2>
-        <p className="text-xs text-[#6B7280]">
-          The Enquiry Inbox is managed by Mrs Sarah. To send an enquiry or message Mrs Sarah, use the public contact form or the Messages tab.
-        </p>
-        <div className="pt-2">
-          <Link
-            href="/app/messages"
-            className="px-4 py-2 rounded-xl bg-[#1E4E8C] text-white font-bold text-xs inline-flex items-center gap-1.5"
-          >
-            Go to Messages
-          </Link>
-        </div>
+      <div className="flex items-center justify-center p-12">
+        <div className="w-8 h-8 border-3 border-[#1E4E8C] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }

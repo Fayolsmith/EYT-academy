@@ -11,7 +11,7 @@ export type LessonMode = 'online' | 'home';
 export type BookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
 export type MilestoneStatus = 'not_started' | 'in_progress' | 'achieved';
 export type SubjectArea = 'literacy' | 'numeracy' | 'practical_life' | 'cultural' | 'arts';
-export type InvoiceStatus = 'unpaid' | 'paid' | 'cancelled';
+export type InvoiceStatus = 'unpaid' | 'payment_submitted' | 'paid' | 'cancelled';
 export type EnquiryStatus = 'new' | 'contacted' | 'converted' | 'closed';
 
 export type Database = {

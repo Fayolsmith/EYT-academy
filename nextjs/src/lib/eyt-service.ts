@@ -103,12 +103,17 @@ export interface Invoice {
   id: string;
   parent_profile_id: string;
   parent_name?: string;
+  child_id?: string | null;
+  child_name?: string | null;
   invoice_number: string;
   amount: number;
   currency: string;
   description: string | null;
   status: InvoiceStatus;
   payment_method: string;
+  payment_proof_url?: string | null;
+  payment_proof_name?: string | null;
+  payment_proof_uploaded_at?: string | null;
   due_date: string | null;
   paid_at: string | null;
   created_at: string;
@@ -346,6 +351,8 @@ const DEFAULT_INVOICES: Invoice[] = [
     id: 'inv-1',
     parent_profile_id: 'parent-demo-id',
     parent_name: 'Mrs Elizabeth Adeleke',
+    child_id: 'child-1',
+    child_name: 'Leo Adeleke',
     invoice_number: 'INV-2026-001',
     amount: 45000,
     currency: 'NGN',
@@ -360,6 +367,8 @@ const DEFAULT_INVOICES: Invoice[] = [
     id: 'inv-2',
     parent_profile_id: 'parent-demo-id',
     parent_name: 'Mrs Elizabeth Adeleke',
+    child_id: 'child-1',
+    child_name: 'Leo Adeleke',
     invoice_number: 'INV-2026-002',
     amount: 50000,
     currency: 'NGN',
@@ -367,6 +376,25 @@ const DEFAULT_INVOICES: Invoice[] = [
     status: 'unpaid',
     payment_method: 'manual',
     due_date: '2026-09-15',
+    paid_at: null,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'inv-3',
+    parent_profile_id: 'unclaimed-uche@example.com',
+    parent_name: 'Mr Uche Balogun',
+    child_id: 'child-3',
+    child_name: 'Tobi Balogun',
+    invoice_number: 'INV-2026-003',
+    amount: 35000,
+    currency: 'NGN',
+    description: 'Primary 1 Phonics Readiness Tutorial (2 Sessions)',
+    status: 'payment_submitted',
+    payment_method: 'manual',
+    payment_proof_url: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=800&q=80',
+    payment_proof_name: 'bank_transfer_receipt_tobi.jpg',
+    payment_proof_uploaded_at: new Date().toISOString(),
+    due_date: '2026-09-20',
     paid_at: null,
     created_at: new Date().toISOString(),
   },
@@ -522,6 +550,12 @@ export const EYTService = {
   },
 
   switchToOwner(): UserProfile {
+    const current = this.getCurrentUser();
+    // Security Guard: Parents CANNOT escalate to owner!
+    if (current.role !== 'owner' && !current.email?.includes('sarah')) {
+      console.error('[SECURITY VIOLATION] Unauthorized attempt to elevate to owner by:', current.email);
+      throw new Error('Access denied: Unauthorized attempt to escalate privileges to owner role.');
+    }
     this.setCurrentUser(DEFAULT_SARAH_PROFILE);
     return DEFAULT_SARAH_PROFILE;
   },
@@ -536,13 +570,18 @@ export const EYTService = {
   // ------------------------------------------------
   getChildren(parentProfileId?: string): Child[] {
     const all = storage.get<Child[]>('children', DEFAULT_CHILDREN);
-    if (!parentProfileId) return all;
-
     const currentUser = this.getCurrentUser();
-    const currentEmail = currentUser?.email?.toLowerCase().trim();
 
+    // Owner role can view all children or filter by specific parent
+    if (currentUser.role === 'owner') {
+      if (!parentProfileId) return all;
+      return all.filter((c) => c.parent_profile_id === parentProfileId);
+    }
+
+    // NON-OWNER / PARENT: STRICTLY restrict to own children only!
+    const currentEmail = currentUser?.email?.toLowerCase().trim();
     return all.filter((c) => {
-      if (c.parent_profile_id === parentProfileId) return true;
+      if (c.parent_profile_id === currentUser.id) return true;
       if (currentEmail && c.parent_email?.toLowerCase().trim() === currentEmail) return true;
       return false;
     });
@@ -825,11 +864,15 @@ export const EYTService = {
   },
 
   addResource(data: Omit<Resource, 'id' | 'created_at' | 'tutor_id'>): Resource {
+    const currentUser = this.getCurrentUser();
+    if (currentUser.role !== 'owner') {
+      throw new Error('[SECURITY VIOLATION] Only Mrs Sarah can add learning resources.');
+    }
     const list = this.getResources();
     const newRes: Resource = {
       ...data,
       id: `res-${Date.now()}`,
-      tutor_id: 'tutor-sarah-id',
+      tutor_id: currentUser.id || 'tutor-sarah-id',
       created_at: new Date().toISOString(),
     };
     list.push(newRes);
@@ -842,14 +885,72 @@ export const EYTService = {
   // ------------------------------------------------
   getInvoices(parentProfileId?: string): Invoice[] {
     const list = storage.get<Invoice[]>('invoices', DEFAULT_INVOICES);
-    if (parentProfileId) {
-      return list.filter((i) => i.parent_profile_id === parentProfileId);
+    const currentUser = this.getCurrentUser();
+
+    // Owner can view all invoices or filter by parent
+    if (currentUser.role === 'owner') {
+      if (parentProfileId) {
+        return list.filter((i) => i.parent_profile_id === parentProfileId);
+      }
+      return list;
     }
-    return list;
+
+    // Non-owner (Parent): STRICTLY restrict to own invoices only!
+    const parentEmail = currentUser.email?.toLowerCase().trim();
+    return list.filter(
+      (i) =>
+        i.parent_profile_id === currentUser.id ||
+        (parentEmail && i.parent_profile_id === `unclaimed-${parentEmail}`)
+    );
+  },
+
+  /**
+   * Upload payment proof for an unpaid invoice.
+   * Updates status to 'payment_submitted' ("Payment Submitted – Pending Verification").
+   */
+  uploadPaymentProof(invoiceId: string, proofUrl: string, proofName?: string): Invoice | null {
+    const list = storage.get<Invoice[]>('invoices', DEFAULT_INVOICES);
+    const idx = list.findIndex((i) => i.id === invoiceId);
+    if (idx === -1) return null;
+
+    list[idx] = {
+      ...list[idx],
+      status: 'payment_submitted',
+      payment_proof_url: proofUrl,
+      payment_proof_name: proofName || 'receipt_screenshot',
+      payment_proof_uploaded_at: new Date().toISOString(),
+    };
+    storage.set('invoices', list);
+    return list[idx];
+  },
+
+  /**
+   * Owner action: Confirm submitted payment proof and mark invoice as paid.
+   */
+  confirmInvoicePayment(invoiceId: string): Invoice | null {
+    const currentUser = this.getCurrentUser();
+    if (currentUser.role !== 'owner') {
+      throw new Error('[SECURITY VIOLATION] Only Mrs Sarah can confirm payments.');
+    }
+    const list = storage.get<Invoice[]>('invoices', DEFAULT_INVOICES);
+    const idx = list.findIndex((i) => i.id === invoiceId);
+    if (idx === -1) return null;
+
+    list[idx] = {
+      ...list[idx],
+      status: 'paid',
+      paid_at: new Date().toISOString(),
+    };
+    storage.set('invoices', list);
+    return list[idx];
   },
 
   markInvoicePaid(id: string): Invoice | null {
-    const list = this.getInvoices();
+    const currentUser = this.getCurrentUser();
+    if (currentUser.role !== 'owner') {
+      throw new Error('[SECURITY VIOLATION] Only Mrs Sarah can mark invoices as paid.');
+    }
+    const list = storage.get<Invoice[]>('invoices', DEFAULT_INVOICES);
     const idx = list.findIndex((i) => i.id === id);
     if (idx === -1) return null;
     list[idx].status = 'paid';
@@ -859,7 +960,11 @@ export const EYTService = {
   },
 
   createInvoice(data: Omit<Invoice, 'id' | 'created_at' | 'paid_at' | 'invoice_number'>): Invoice {
-    const list = this.getInvoices();
+    const currentUser = this.getCurrentUser();
+    if (currentUser.role !== 'owner') {
+      throw new Error('[SECURITY VIOLATION] Only Mrs Sarah can issue tuition invoices.');
+    }
+    const list = storage.get<Invoice[]>('invoices', DEFAULT_INVOICES);
     const count = list.length + 1;
     const invNumber = `INV-2026-${String(count).padStart(3, '0')}`;
     const newInv: Invoice = {
@@ -878,7 +983,6 @@ export const EYTService = {
   // ENQUIRIES (Public Form)
   // ------------------------------------------------
   async submitEnquiry(data: { name: string; contact: string; child_age?: string; preferred_mode?: string; message: string }): Promise<Enquiry> {
-    // If Supabase is configured, try Supabase insert first
     if (this.isSupabaseConfigured()) {
       try {
         const client = createSPAClient();
@@ -916,11 +1020,21 @@ export const EYTService = {
   },
 
   getEnquiries(): Enquiry[] {
+    const user = this.getCurrentUser();
+    // Security check: non-owners cannot retrieve enquiry data
+    if (user.role !== 'owner') {
+      console.warn('[SECURITY] Unauthorized access attempt to enquiries by role:', user.role);
+      return [];
+    }
     return storage.get<Enquiry[]>('enquiries', DEFAULT_ENQUIRIES);
   },
 
   updateEnquiryStatus(id: string, status: EnquiryStatus) {
-    const list = this.getEnquiries();
+    const user = this.getCurrentUser();
+    if (user.role !== 'owner') {
+      throw new Error('[SECURITY VIOLATION] Only Mrs Sarah can modify enquiry statuses.');
+    }
+    const list = storage.get<Enquiry[]>('enquiries', DEFAULT_ENQUIRIES);
     const idx = list.findIndex((e) => e.id === id);
     if (idx >= 0) {
       list[idx].status = status;

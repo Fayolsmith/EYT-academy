@@ -16,28 +16,20 @@ import {
     X,
     LogOut,
     Home,
-    UserCheck
+    UserCheck,
+    Eye,
+    EyeOff
 } from 'lucide-react';
 import { useGlobal } from '@/lib/context/GlobalContext';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const [isSidebarOpen, setSidebarOpen] = useState(false);
-    const [isDev, setIsDev] = useState(false);
     const pathname = usePathname();
     const router = useRouter();
 
-    const { profile, user, loading, logout, setRole } = useGlobal();
+    const { profile, user, loading, logout, isParentPreview, previewAsParent, exitParentPreview } = useGlobal();
     const isOwner = profile?.role === 'owner';
-
-    useEffect(() => {
-        if (
-            process.env.NODE_ENV === 'development' &&
-            typeof window !== 'undefined' &&
-            (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-        ) {
-            setIsDev(true);
-        }
-    }, []);
+    const isRealOwner = user?.role === 'owner' || isParentPreview;
 
     useEffect(() => {
         if (!loading && !profile && !user) {
@@ -48,14 +40,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const handleLogout = async () => {
         await logout();
         window.location.href = '/login';
-    };
-
-    const toggleRole = () => {
-        if (isOwner) {
-            setRole('parent');
-        } else {
-            setRole('owner');
-        }
     };
 
     // Navigation items tailored to roles
@@ -141,16 +125,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     <div className="p-3 bg-[#E8F0FA] border-b border-[#C7DAF3]/60 flex items-center justify-between text-xs">
                         <div className="flex items-center gap-1.5 font-semibold text-[#1E4E8C]">
                             <UserCheck className="w-3.5 h-3.5 text-[#D4A017]" />
-                            <span>Role: <strong className="capitalize text-[#1E4E8C]">{profile?.role || 'Parent'}</strong></span>
+                            <span>
+                                Role: <strong className="capitalize text-[#1E4E8C]">{isParentPreview ? 'Parent (QA Preview)' : (profile?.role || 'Parent')}</strong>
+                            </span>
                         </div>
-                        {isDev && (
-                            <button
-                                onClick={toggleRole}
-                                className="text-[11px] font-bold text-[#D4A017] hover:underline"
-                                title="Localhost Dev only: Switch view between Parent and Owner"
-                            >
-                                Toggle View
-                            </button>
+                        {isRealOwner && (
+                            isParentPreview ? (
+                                <button
+                                    onClick={exitParentPreview}
+                                    className="text-[11px] font-bold text-amber-700 hover:underline flex items-center gap-1"
+                                    title="Exit preview and return to Mrs Sarah owner dashboard"
+                                >
+                                    <EyeOff className="w-3 h-3" />
+                                    Exit Preview
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={previewAsParent}
+                                    className="text-[11px] font-bold text-[#1E4E8C] hover:underline flex items-center gap-1"
+                                    title="Preview parent view as Mrs Sarah"
+                                >
+                                    <Eye className="w-3 h-3 text-[#D4A017]" />
+                                    Preview Parent
+                                </button>
+                            )
                         )}
                     </div>
 
@@ -231,16 +229,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        {/* Quick Role Switcher Button - Localhost Dev Only */}
-                        {isDev && (
-                            <button
-                                onClick={toggleRole}
-                                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border border-[#C7DAF3] bg-[#E8F0FA] text-[#1E4E8C] hover:bg-[#d8e6f7] transition-all"
-                            >
-                                <UserCheck className="w-3.5 h-3.5 text-[#D4A017]" />
-                                <span className="hidden sm:inline">Switch Mode:</span>
-                                <span className="text-[#D4A017]">{isOwner ? 'Mrs Sarah' : 'Parent'}</span>
-                            </button>
+                        {/* Owner Parent Preview Toggle - strictly restricted to Mrs Sarah */}
+                        {isRealOwner && (
+                            isParentPreview ? (
+                                <button
+                                    onClick={exitParentPreview}
+                                    className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 transition-all shadow-xs"
+                                >
+                                    <EyeOff className="w-3.5 h-3.5 text-amber-700" />
+                                    <span>Exit Parent Preview</span>
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={previewAsParent}
+                                    className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border border-[#C7DAF3] bg-[#E8F0FA] text-[#1E4E8C] hover:bg-[#d8e6f7] transition-all"
+                                >
+                                    <Eye className="w-3.5 h-3.5 text-[#D4A017]" />
+                                    <span className="hidden sm:inline">Preview as</span>
+                                    <span>Parent</span>
+                                </button>
+                            )
                         )}
 
                         <Link
@@ -251,6 +259,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         </Link>
                     </div>
                 </header>
+
+                {/* QA Parent Preview Banner */}
+                {isParentPreview && (
+                    <div className="bg-amber-500 text-white px-4 sm:px-8 py-2.5 flex items-center justify-between gap-4 text-xs font-semibold shadow-inner">
+                        <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-md bg-amber-700 text-white font-bold uppercase text-[10px] tracking-wider">
+                                QA Mode
+                            </span>
+                            <span>You are previewing the Parent Portal as Mrs Sarah. Real client data remains protected.</span>
+                        </div>
+                        <button
+                            onClick={exitParentPreview}
+                            className="px-3 py-1 rounded-lg bg-white text-amber-900 font-bold hover:bg-amber-50 transition-colors shrink-0 shadow-xs"
+                        >
+                            Exit Preview
+                        </button>
+                    </div>
+                )}
 
                 {/* Dashboard Page Content */}
                 <main className="flex-1 p-4 sm:p-6 lg:p-8">

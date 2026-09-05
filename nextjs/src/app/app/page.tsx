@@ -11,7 +11,6 @@ import {
   Video,
   Mail,
   Phone,
-  Sparkles,
   BookOpen
 } from 'lucide-react';
 import { useGlobal } from '@/lib/context/GlobalContext';
@@ -57,11 +56,10 @@ export default function DashboardPage() {
       <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-200 flex flex-col md:flex-row md:items-center md:justify-between gap-6 relative overflow-hidden">
         <div className="space-y-2 relative z-10">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#E8F0FA] text-xs font-bold text-[#1E4E8C] uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5 text-[#D4A017]" />
             {isOwner ? 'Mrs Sarah • Head Educator Dashboard' : 'Parent & Family Portal'}
           </div>
           <h1 className="font-heading text-2xl sm:text-3xl font-bold text-[#1E4E8C]">
-            Welcome back, {profile?.full_name || 'Family'}! 👋
+            Welcome back, {profile?.full_name || 'Family'}!
           </h1>
           <p className="text-xs sm:text-sm text-[#6B7280]">
             {isOwner
@@ -467,13 +465,6 @@ export default function DashboardPage() {
                     Students enrolled in active Montessori tutorial programs
                   </p>
                 </div>
-                <button
-                  onClick={() => setIsAddChildOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#D4A017] text-white text-xs font-bold hover:bg-[#A9790A] transition-all shadow-xs"
-                >
-                  <PlusCircle className="w-3.5 h-3.5" />
-                  Enroll Student
-                </button>
               </div>
 
               <div className="space-y-3">
