@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, UserPlus, Mail, Phone, User, Sparkles, ShieldCheck } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, UserPlus, Mail, Phone, User, Sparkles, ShieldCheck, Camera, Trash2 } from 'lucide-react';
 import { EYTService, Child } from '@/lib/eyt-service';
 
 interface AddChildModalProps {
@@ -25,12 +25,46 @@ export default function AddChildModal({ isOpen, onClose, onChildAdded }: AddChil
   const [ageYears, setAgeYears] = useState('4');
   const [notes, setNotes] = useState('');
   const [learningGoals, setLearningGoals] = useState('');
+
+  // Child photo upload
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size must be 5MB or less.');
+      return;
+    }
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      setError('Please select a JPG, PNG, or WebP image.');
+      return;
+    }
+
+    setAvatarFile(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAvatarPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    setError('');
+  };
+
+  const handleRemovePhoto = () => {
+    setAvatarPreview(null);
+    setAvatarFile(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -53,6 +87,15 @@ export default function AddChildModal({ isOpen, onClose, onChildAdded }: AddChil
     setIsSubmitting(true);
 
     try {
+      let finalAvatarUrl: string | null = null;
+      if (avatarFile) {
+        finalAvatarUrl = await EYTService.uploadAvatar(
+          avatarFile,
+          'children',
+          `child-${Date.now()}`
+        );
+      }
+
       const newChild = EYTService.addChild({
         name: name.trim(),
         date_of_birth: dateOfBirth || undefined,
@@ -62,6 +105,7 @@ export default function AddChildModal({ isOpen, onClose, onChildAdded }: AddChil
         parent_name: isOwner ? parentName.trim() : undefined,
         parent_email: isOwner ? parentEmail.trim().toLowerCase() : undefined,
         parent_phone: isOwner && parentPhone.trim() ? parentPhone.trim() : undefined,
+        avatar_url: finalAvatarUrl,
       });
 
       onChildAdded(newChild);
@@ -72,6 +116,8 @@ export default function AddChildModal({ isOpen, onClose, onChildAdded }: AddChil
       setParentName('');
       setParentEmail('');
       setParentPhone('');
+      setAvatarPreview(null);
+      setAvatarFile(null);
       onClose();
     } catch (err) {
       if (err instanceof Error) {
@@ -99,50 +145,50 @@ export default function AddChildModal({ isOpen, onClose, onChildAdded }: AddChil
               <UserPlus className="w-5 h-5 text-[#D4A017]" />
             </div>
             <div>
-              <h3 className="font-heading text-lg sm:text-xl font-bold text-[#1E4E8C]">
-                {isOwner ? 'Enroll New Student Profile' : 'Add Child Profile'}
-              </h3>
+              <h2 className="font-heading font-bold text-lg text-[#1E4E8C]">
+                {isOwner ? 'Enroll Student & Link Parent' : 'Add Child Profile'}
+              </h2>
               <p className="text-xs text-[#6B7280]">
                 {isOwner
-                  ? 'Link a learner to a parent contact for scheduling & milestones'
-                  : 'Register your child for personalized tutoring & milestones'}
+                  ? 'Connect student to parent contact details for billing and progress notes'
+                  : 'Add your child to start scheduling tutorials and tracking milestones'}
               </p>
             </div>
           </div>
-
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-            aria-label="Close modal"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
+        {/* Form Error */}
         {error && (
-          <div className="mt-4 p-3 bg-red-50 text-red-700 text-xs rounded-xl border border-red-200">
+          <div className="mt-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           
-          {/* Owner-Only: Parent Contact Details Linking */}
+          {/* OWNER VIEW: Parent Contact Information */}
           {isOwner && (
-            <div className="p-4 bg-[#F3F7FD] rounded-2xl border border-[#C7DAF3]/80 space-y-3">
-              <div className="flex items-start gap-2">
-                <ShieldCheck className="w-4 h-4 text-[#1E4E8C] shrink-0 mt-0.5" />
-                <div>
-                  <div className="text-xs font-bold text-[#1E4E8C]">Parent Contact Linking</div>
-                  <p className="text-[11px] text-[#14263F]/80">
-                    When this parent later signs up at <strong>/signup</strong> with this email, this child profile automatically links to their portal with no duplicate records.
-                  </p>
-                </div>
+            <div className="p-4 rounded-2xl bg-[#FCFBF7] border border-[#F3E7C4] space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#1E4E8C] flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-[#D4A017]" />
+                  Parent Contact (Required for linking)
+                </span>
+                <span className="text-[10px] bg-amber-100 text-amber-900 font-semibold px-2 py-0.5 rounded-full">
+                  Auto Account Link
+                </span>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#14263F] uppercase tracking-wider mb-1">
-                  Parent / Guardian Full Name *
+                <label className="block text-[11px] font-bold text-[#14263F] uppercase mb-1">
+                  Parent / Guardian Name *
                 </label>
                 <div className="relative">
                   <input
@@ -150,17 +196,17 @@ export default function AddChildModal({ isOpen, onClose, onChildAdded }: AddChil
                     required
                     value={parentName}
                     onChange={(e) => setParentName(e.target.value)}
-                    placeholder="e.g. Mrs Chioma Okonkwo"
-                    className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-gray-300 bg-white text-xs sm:text-sm focus:ring-2 focus:ring-[#1E4E8C] outline-none"
+                    placeholder="e.g. Mrs Elizabeth Adeleke"
+                    className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-gray-300 text-xs focus:outline-none focus:ring-2 focus:ring-[#1E4E8C] transition-all bg-white"
                   />
                   <User className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-[#14263F] uppercase tracking-wider mb-1">
-                    Parent Email Address *
+                  <label className="block text-[11px] font-bold text-[#14263F] uppercase mb-1">
+                    Parent Email (for login) *
                   </label>
                   <div className="relative">
                     <input
@@ -168,15 +214,15 @@ export default function AddChildModal({ isOpen, onClose, onChildAdded }: AddChil
                       required
                       value={parentEmail}
                       onChange={(e) => setParentEmail(e.target.value)}
-                      placeholder="parent@example.com"
-                      className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-gray-300 bg-white text-xs sm:text-sm focus:ring-2 focus:ring-[#1E4E8C] outline-none"
+                      placeholder="elizabeth@example.com"
+                      className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-gray-300 text-xs focus:outline-none focus:ring-2 focus:ring-[#1E4E8C] transition-all bg-white"
                     />
                     <Mail className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                  <label className="block text-[11px] font-bold text-[#14263F] uppercase mb-1">
                     Parent Phone / WhatsApp
                   </label>
                   <div className="relative">
@@ -184,8 +230,8 @@ export default function AddChildModal({ isOpen, onClose, onChildAdded }: AddChil
                       type="tel"
                       value={parentPhone}
                       onChange={(e) => setParentPhone(e.target.value)}
-                      placeholder="e.g. 08012345678"
-                      className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-gray-300 bg-white text-xs sm:text-sm focus:ring-2 focus:ring-[#1E4E8C] outline-none"
+                      placeholder="08023456789"
+                      className="w-full pl-9 pr-3.5 py-2 rounded-xl border border-gray-300 text-xs focus:outline-none focus:ring-2 focus:ring-[#1E4E8C] transition-all bg-white"
                     />
                     <Phone className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
                   </div>
@@ -193,6 +239,57 @@ export default function AddChildModal({ isOpen, onClose, onChildAdded }: AddChil
               </div>
             </div>
           )}
+
+          {/* Child Photo Section */}
+          <div className="flex items-center gap-4 p-3 bg-[#FCFBF7] rounded-2xl border border-[#F3E7C4]">
+            <div className="w-14 h-14 rounded-2xl overflow-hidden bg-white border border-[#D4A017] flex items-center justify-center shrink-0">
+              {avatarPreview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={avatarPreview}
+                  alt="Child preview"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="font-heading font-bold text-lg text-[#1E4E8C]">
+                  {name ? name.charAt(0).toUpperCase() : <Camera className="w-5 h-5 text-gray-400" />}
+                </span>
+              )}
+            </div>
+
+            <div className="space-y-1 flex-1">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={handlePhotoSelect}
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-3 py-1.5 rounded-lg bg-[#1E4E8C] text-white text-xs font-bold hover:bg-[#153763] transition-colors flex items-center gap-1.5"
+                >
+                  <Camera className="w-3.5 h-3.5 text-[#D4A017]" />
+                  {avatarPreview ? 'Change Photo' : 'Upload Child Photo (Optional)'}
+                </button>
+                {avatarPreview && (
+                  <button
+                    type="button"
+                    onClick={handleRemovePhoto}
+                    className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                    title="Remove photo"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              <p className="text-[10px] text-[#6B7280]">
+                JPG, PNG, or WebP up to 5MB.
+              </p>
+            </div>
+          </div>
 
           {/* Child Information */}
           <div>

@@ -15,7 +15,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { useGlobal } from '@/lib/context/GlobalContext';
-import { EYTService, Invoice, Child } from '@/lib/eyt-service';
+import { EYTService, Invoice, Child, BankDetails } from '@/lib/eyt-service';
 
 export default function InvoicesPage() {
   const { profile } = useGlobal();
@@ -23,6 +23,7 @@ export default function InvoicesPage() {
 
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [enrolledChildren, setEnrolledChildren] = useState<Child[]>([]);
+  const [bankDetails, setBankDetails] = useState<BankDetails>(() => EYTService.getBankDetails());
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // New Invoice Form
@@ -56,6 +57,7 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     loadInvoices();
+    setBankDetails(EYTService.getBankDetails());
     if (isOwner) {
       loadChildren();
     }
@@ -186,13 +188,20 @@ export default function InvoicesPage() {
                 Manual Bank Transfer Instructions
               </h3>
               <p className="text-xs text-[#6B7280] leading-relaxed">
-                Please transfer tutorial fees directly to Mrs Sarah’s designated account. After payment, click <strong>Upload Proof</strong> on your invoice below. You can also send proof via WhatsApp to <strong>09133651659</strong>.
+                {bankDetails.instructions || 'Please transfer tutorial fees directly to Mrs Sarah’s designated account.'} After payment, click <strong>Upload Proof</strong> on your invoice below. You can also send proof via WhatsApp to <strong>{bankDetails.whatsapp_number}</strong>.
               </p>
+              <div className="text-xs text-[#1E4E8C] font-semibold pt-1 flex flex-wrap gap-x-3 gap-y-1">
+                <span>{bankDetails.bank_name}</span>
+                <span>•</span>
+                <span>Acct: <strong>{bankDetails.account_number}</strong></span>
+                <span>•</span>
+                <span>Name: <strong>{bankDetails.account_name}</strong></span>
+              </div>
             </div>
           </div>
 
           <a
-            href="https://wa.me/2349133651659"
+            href={`https://wa.me/234${bankDetails.whatsapp_number.replace(/^0/, '')}`}
             target="_blank"
             rel="noopener noreferrer"
             className="px-4 py-2 rounded-xl bg-[#1E4E8C] text-white text-xs font-bold hover:bg-[#153763] transition-colors shrink-0 text-center"
@@ -515,9 +524,9 @@ export default function InvoicesPage() {
             <form onSubmit={handleSubmitProof} className="space-y-4">
               <div className="bg-[#FCFBF7] border border-[#F3E7C4] rounded-xl p-3 text-xs text-[#14263F] space-y-1">
                 <p className="font-bold text-[#1E4E8C]">Mrs Sarah’s Designated Bank Account:</p>
-                <p>Bank: <strong>Guaranty Trust Bank (GTBank)</strong></p>
-                <p>Account Name: <strong>Sarah Adeleke / EYT Academy</strong></p>
-                <p>Account Number: <strong>0123456789</strong></p>
+                <p>Bank: <strong>{bankDetails.bank_name}</strong></p>
+                <p>Account Name: <strong>{bankDetails.account_name}</strong></p>
+                <p>Account Number: <strong>{bankDetails.account_number}</strong></p>
               </div>
 
               {/* File Dropzone */}
@@ -591,7 +600,7 @@ export default function InvoicesPage() {
               )}
 
               <p className="text-[11px] text-[#6B7280]">
-                Prefer WhatsApp? You can also message Mrs Sarah directly at <strong>09133651659</strong>.
+                Prefer WhatsApp? You can also message Mrs Sarah directly at <strong>{bankDetails.whatsapp_number}</strong>.
               </p>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">

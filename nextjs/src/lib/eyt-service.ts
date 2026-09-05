@@ -17,6 +17,7 @@ export interface Child {
   parent_email?: string | null;
   parent_phone?: string | null;
   has_portal_account?: boolean;
+  avatar_url?: string | null;
   created_at: string;
 }
 
@@ -139,6 +140,49 @@ export interface UserProfile {
   avatar_url: string | null;
 }
 
+export interface BankDetails {
+  bank_name: string;
+  account_name: string;
+  account_number: string;
+  instructions: string;
+  whatsapp_number: string;
+  business_email: string;
+  business_phone?: string;
+}
+
+export const DEFAULT_BANK_DETAILS: BankDetails = {
+  bank_name: 'Guaranty Trust Bank (GTBank)',
+  account_name: 'Sarah Adeleke / EYT Academy',
+  account_number: '0123456789',
+  instructions: 'Please transfer tutorial fees directly to Mrs Sarah’s designated account. After payment, click Upload Proof on your invoice below or send via WhatsApp.',
+  whatsapp_number: '09133651659',
+  business_email: 'sarahoakhena@gmail.com',
+  business_phone: '09133651659',
+};
+
+export interface ChildNotificationPreference {
+  session_reminders: boolean;
+  milestone_updates: boolean;
+}
+
+export interface NotificationPreferences {
+  email_reminders: boolean;
+  session_reminders: boolean;
+  invoice_alerts: boolean;
+  milestone_updates: boolean;
+  child_notifications?: Record<string, ChildNotificationPreference>;
+  per_child_reminders?: Record<string, boolean>;
+}
+
+export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
+  email_reminders: true,
+  session_reminders: true,
+  invoice_alerts: true,
+  milestone_updates: true,
+  child_notifications: {},
+  per_child_reminders: {},
+};
+
 // Initial default seed data
 const DEFAULT_MILESTONES: Milestone[] = [
   // Literacy
@@ -199,6 +243,7 @@ const DEFAULT_CHILDREN: Child[] = [
     parent_email: 'elizabeth@example.com',
     parent_phone: '08023456789',
     has_portal_account: true,
+    avatar_url: 'https://images.unsplash.com/photo-1543332164-6e82f355badc?auto=format&fit=crop&w=300&q=80',
     created_at: new Date().toISOString(),
   },
   {
@@ -213,6 +258,7 @@ const DEFAULT_CHILDREN: Child[] = [
     parent_email: 'elizabeth@example.com',
     parent_phone: '08023456789',
     has_portal_account: true,
+    avatar_url: 'https://images.unsplash.com/photo-1595454223600-91fb57cb2e1e?auto=format&fit=crop&w=300&q=80',
     created_at: new Date().toISOString(),
   },
   {
@@ -227,6 +273,7 @@ const DEFAULT_CHILDREN: Child[] = [
     parent_email: 'uche@example.com',
     parent_phone: '08098765432',
     has_portal_account: false,
+    avatar_url: null,
     created_at: new Date().toISOString(),
   },
 ];
@@ -568,6 +615,104 @@ export const EYTService = {
     return this.loginAsParent();
   },
 
+  updateProfile(data: { full_name?: string; email?: string; phone?: string | null; avatar_url?: string | null }): UserProfile {
+    const currentUser = this.getCurrentUser();
+    const updated: UserProfile = {
+      ...currentUser,
+      full_name: data.full_name !== undefined ? data.full_name : currentUser.full_name,
+      email: data.email !== undefined ? data.email : currentUser.email,
+      phone: data.phone !== undefined ? data.phone : currentUser.phone,
+      avatar_url: data.avatar_url !== undefined ? data.avatar_url : currentUser.avatar_url,
+    };
+    this.setCurrentUser(updated);
+
+    if (this.isSupabaseConfigured()) {
+      try {
+        const client = createSPAClient();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (client.from('profiles') as any).update({
+          full_name: updated.full_name,
+          phone: updated.phone,
+          avatar_url: updated.avatar_url,
+        }).eq('id', updated.id).then();
+      } catch (err) {
+        console.warn('Supabase profile update warning:', err);
+      }
+    }
+    return updated;
+  },
+
+  async uploadAvatar(file: File, folder: 'profiles' | 'children', entityId: string): Promise<string> {
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error('Image file size must be 5MB or less');
+    }
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      throw new Error('Supported image formats: JPG, PNG, WebP');
+    }
+
+    if (this.isSupabaseConfigured()) {
+      try {
+        const client = createSPAClient();
+        const ext = file.name.split('.').pop() || 'png';
+        const filePath = `${folder}/${entityId}_${Date.now()}.${ext}`;
+        const { error } = await client.storage.from('avatars').upload(filePath, file, {
+          upsert: true,
+        });
+        if (!error) {
+          const { data } = client.storage.from('avatars').getPublicUrl(filePath);
+          if (data?.publicUrl) return data.publicUrl;
+        }
+      } catch (err) {
+        console.warn('Supabase avatars upload error, falling back to data URL:', err);
+      }
+    }
+
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  },
+
+  // ------------------------------------------------
+  // BANK DETAILS & BUSINESS PROFILE (OWNER)
+  // ------------------------------------------------
+  getBankDetails(): BankDetails {
+    return storage.get<BankDetails>('bank_details', DEFAULT_BANK_DETAILS);
+  },
+
+  updateBankDetails(details: Partial<BankDetails>): BankDetails {
+    const currentUser = this.getCurrentUser();
+    if (currentUser.role !== 'owner') {
+      throw new Error('[SECURITY VIOLATION] Only Mrs Sarah can modify business bank details.');
+    }
+    const current = this.getBankDetails();
+    const updated: BankDetails = {
+      ...current,
+      ...details,
+    };
+    storage.set('bank_details', updated);
+    return updated;
+  },
+
+  // ------------------------------------------------
+  // NOTIFICATION PREFERENCES
+  // ------------------------------------------------
+  getNotificationPreferences(userId?: string): NotificationPreferences {
+    const uid = userId || this.getCurrentUser().id;
+    return storage.get<NotificationPreferences>(`notifications_${uid}`, DEFAULT_NOTIFICATION_PREFERENCES);
+  },
+
+  updateNotificationPreferences(prefs: Partial<NotificationPreferences>, userId?: string): NotificationPreferences {
+    const uid = userId || this.getCurrentUser().id;
+    const current = this.getNotificationPreferences(uid);
+    const updated = { ...current, ...prefs };
+    storage.set(`notifications_${uid}`, updated);
+    return updated;
+  },
+
   // ------------------------------------------------
   // CHILDREN
   // ------------------------------------------------
@@ -607,8 +752,9 @@ export const EYTService = {
     parent_phone?: string;
     parent_profile_id?: string;
     has_portal_account?: boolean;
+    avatar_url?: string | null;
   }): Child {
-    const children = this.getChildren();
+    const children = storage.get<Child[]>('children', DEFAULT_CHILDREN);
     const currentUser = this.getCurrentUser();
 
     let parentProfileId = data.parent_profile_id;
@@ -652,6 +798,7 @@ export const EYTService = {
       parent_email: parentEmail || null,
       parent_phone: parentPhone || null,
       has_portal_account: Boolean(hasPortalAccount),
+      avatar_url: data.avatar_url || null,
       created_at: new Date().toISOString(),
     };
 
@@ -673,7 +820,7 @@ export const EYTService = {
   ): Child[] {
     if (!parentEmail) return [];
     const normalizedEmail = parentEmail.trim().toLowerCase();
-    const children = this.getChildren();
+    const children = storage.get<Child[]>('children', DEFAULT_CHILDREN);
     let updated = false;
 
     const claimed: Child[] = [];
@@ -708,7 +855,7 @@ export const EYTService = {
   },
 
   updateChild(id: string, data: Partial<Child>): Child | null {
-    const children = this.getChildren();
+    const children = storage.get<Child[]>('children', DEFAULT_CHILDREN);
     const idx = children.findIndex((c) => c.id === id);
     if (idx === -1) return null;
     children[idx] = { ...children[idx], ...data };
@@ -717,7 +864,7 @@ export const EYTService = {
   },
 
   deleteChild(id: string) {
-    const children = this.getChildren().filter((c) => c.id !== id);
+    const children = storage.get<Child[]>('children', DEFAULT_CHILDREN).filter((c) => c.id !== id);
     storage.set('children', children);
   },
 

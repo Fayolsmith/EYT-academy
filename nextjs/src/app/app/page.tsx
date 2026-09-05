@@ -136,9 +136,18 @@ export default function DashboardPage() {
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-[#E8F0FA] text-[#1E4E8C] font-heading font-bold text-lg flex items-center justify-center border border-[#C7DAF3]">
-                          {child.name.charAt(0)}
-                        </div>
+                        {child.avatar_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={child.avatar_url}
+                            alt={child.name}
+                            className="w-12 h-12 rounded-2xl object-cover border border-[#C7DAF3] shrink-0"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-2xl bg-[#E8F0FA] text-[#1E4E8C] font-heading font-bold text-lg flex items-center justify-center border border-[#C7DAF3] shrink-0">
+                            {child.name.charAt(0)}
+                          </div>
+                        )}
                         <div>
                           <h3 className="font-heading text-lg font-bold text-[#14263F]">
                             {child.name}
@@ -474,9 +483,18 @@ export default function DashboardPage() {
                     className="p-4 rounded-xl border border-gray-100 bg-[#FCFBF7] flex items-center justify-between gap-3"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#1E4E8C] text-white flex items-center justify-center font-bold shrink-0">
-                        {child.name.charAt(0)}
-                      </div>
+                      {child.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={child.avatar_url}
+                          alt={child.name}
+                          className="w-10 h-10 rounded-xl object-cover border border-gray-200 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-xl bg-[#1E4E8C] text-white flex items-center justify-center font-bold shrink-0">
+                          {child.name.charAt(0)}
+                        </div>
+                      )}
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-sm text-[#14263F]">{child.name}</span>

@@ -110,9 +110,18 @@ export default function ChildrenPage() {
                   {/* Top Bar */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-[#1E4E8C] text-[#D4A017] font-heading font-bold text-xl flex items-center justify-center shadow-xs">
-                        {child.name.charAt(0)}
-                      </div>
+                      {child.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={child.avatar_url}
+                          alt={child.name}
+                          className="w-12 h-12 rounded-2xl object-cover border border-[#D4A017] shadow-xs shrink-0"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-2xl bg-[#1E4E8C] text-[#D4A017] font-heading font-bold text-xl flex items-center justify-center shadow-xs shrink-0">
+                          {child.name.charAt(0)}
+                        </div>
+                      )}
                       <div>
                         <h2 className="font-heading text-lg font-bold text-[#14263F]">
                           {child.name}

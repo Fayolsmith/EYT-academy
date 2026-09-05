@@ -94,9 +94,18 @@ export default function MilestonesPage() {
       {selectedChild && (
         <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-[#1E4E8C] text-[#D4A017] font-heading font-bold text-2xl flex items-center justify-center border border-[#D4A017]">
-              {selectedChild.name.charAt(0)}
-            </div>
+            {selectedChild.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={selectedChild.avatar_url}
+                alt={selectedChild.name}
+                className="w-14 h-14 rounded-2xl object-cover border border-[#D4A017] shadow-xs shrink-0"
+              />
+            ) : (
+              <div className="w-14 h-14 rounded-2xl bg-[#1E4E8C] text-[#D4A017] font-heading font-bold text-2xl flex items-center justify-center border border-[#D4A017] shrink-0">
+                {selectedChild.name.charAt(0)}
+              </div>
+            )}
             <div>
               <h2 className="font-heading text-xl font-bold text-[#14263F]">
                 {selectedChild.name}&apos;s Learning Journey
