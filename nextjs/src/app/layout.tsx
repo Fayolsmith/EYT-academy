@@ -27,7 +27,6 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "Mrs Sarah — Early Years Tutor | Montessori & British Curriculum (Ages 3–8)",
   description: "Engaging, child-centered online & home tutorials for children ages 3–8. Montessori-trained, SEN-inclusive early years education.",
-  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -47,7 +46,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${fraunces.variable} ${karla.variable}`}>
       <head>
-        <link rel="manifest" href="/manifest.json" />
+        <link rel="manifest" href="/manifest.json" crossOrigin="use-credentials" />
         <meta name="theme-color" content="#1E4E8C" />
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>

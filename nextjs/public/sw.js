@@ -1,16 +1,25 @@
-const CACHE_NAME = 'eyt-cache-v1';
+const CACHE_NAME = 'eyt-cache-v2';
 const STATIC_ASSETS = [
   '/',
   '/offline.html',
-  '/manifest.json',
   '/images/flyer1.jpeg',
   '/images/flyer2.jpeg',
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
+    caches.open(CACHE_NAME).then(async (cache) => {
+      for (const asset of STATIC_ASSETS) {
+        try {
+          const req = new Request(asset, { credentials: 'include' });
+          const res = await fetch(req);
+          if (res.ok) {
+            await cache.put(req, res);
+          }
+        } catch {
+          // Gracefully continue caching remaining assets
+        }
+      }
     })
   );
   self.skipWaiting();
@@ -42,9 +51,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Bypass dev chunks, hot reloads, Supabase API / auth requests
+  // Bypass dev chunks, hot reloads, manifest, Vercel SSO, Supabase API / auth requests
   if (
     url.pathname.startsWith('/api') ||
+    url.pathname === '/manifest.json' ||
+    url.hostname.includes('vercel.com') ||
     url.hostname.includes('supabase.co') ||
     url.pathname.includes('webpack') ||
     url.pathname.includes('hot-update')

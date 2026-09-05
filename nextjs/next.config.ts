@@ -10,6 +10,18 @@ const nextConfig: NextConfig = {
   typescript: {
     // Already checked during build
   },
+  async headers() {
+    return [
+      {
+        source: '/manifest.json',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, OPTIONS' },
+          { key: 'Access-Control-Allow-Headers', value: 'X-Requested-With, Content-Type, Accept' },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
