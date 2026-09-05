@@ -2,8 +2,8 @@
 // Seamlessly connects to Supabase when configured, or provides local persistent storage for instant demo/testing
 
 import { createSPAClient } from '@/lib/supabase/client';
-import { UserRole, LessonMode, BookingStatus, MilestoneStatus, SubjectArea, InvoiceStatus, EnquiryStatus } from '@/lib/types';
-export type { UserRole, LessonMode, BookingStatus, MilestoneStatus, SubjectArea, InvoiceStatus, EnquiryStatus };
+import { UserRole, LessonMode, BookingStatus, MilestoneStatus, SubjectArea, InvoiceStatus, EnquiryStatus, AssignmentStatus } from '@/lib/types';
+export type { UserRole, LessonMode, BookingStatus, MilestoneStatus, SubjectArea, InvoiceStatus, EnquiryStatus, AssignmentStatus };
 
 export interface Child {
   id: string;
@@ -184,6 +184,52 @@ export interface EnquiryEmailNotification {
     preferred_mode?: string | null;
     message: string;
   };
+}
+
+export interface Assignment {
+  id: string;
+  tutor_id: string;
+  child_id: string;
+  title: string;
+  description: string;
+  milestone_id: string | null;
+  resource_id: string | null;
+  due_date: string | null;
+  status: AssignmentStatus;
+  created_at: string;
+  // Enriched display fields
+  child_name?: string;
+  parent_name?: string;
+  parent_email?: string;
+  parent_profile_id?: string;
+  milestone_name?: string;
+  milestone_area?: string;
+  resource_title?: string;
+  resource_url?: string;
+}
+
+export interface AssignmentSubmission {
+  id: string;
+  assignment_id: string;
+  submitted_by_profile_id: string;
+  submitted_by_name?: string;
+  submission_note: string;
+  submission_photo_url: string | null;
+  submitted_at: string;
+  tutor_feedback: string | null;
+  reviewed_at: string | null;
+  milestone_marked_achieved: boolean;
+}
+
+export interface AssignmentNotification {
+  id: string;
+  recipient_email: string;
+  recipient_name: string;
+  event_type: 'assignment_created' | 'assignment_submitted' | 'assignment_reviewed';
+  assignment_id: string;
+  title: string;
+  message: string;
+  sent_at: string;
 }
 
 export interface BankDetails {
@@ -582,6 +628,135 @@ const DEFAULT_RESOURCES: Resource[] = [
     age_range: '3-7',
     created_at: new Date().toISOString(),
   },
+];
+
+const DEFAULT_ASSIGNMENTS: Assignment[] = [
+  {
+    id: 'asgn-1',
+    tutor_id: 'tutor-sarah-id',
+    child_id: 'child-1',
+    title: 'Montessori Scissor Cutting Strips Practice',
+    description: 'Please encourage Leo to practice cutting along the solid straight and zigzag lines on the printed strips. Emphasize thumb-up grip on safety scissors to develop hand strength for writing.',
+    milestone_id: 'm-prac-1',
+    resource_id: 'res-1',
+    due_date: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
+    status: 'assigned',
+    created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+    child_name: 'Leo Adeleke',
+    parent_name: 'Mrs Elizabeth Adeleke',
+    parent_email: 'elizabeth@example.com',
+    parent_profile_id: 'parent-demo-id',
+    milestone_name: 'Scissor cutting and fine pincer grip',
+    milestone_area: 'practical_life',
+    resource_title: 'Montessori Sandpaper Letter Sound Guide (PDF)',
+    resource_url: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: 'asgn-2',
+    tutor_id: 'tutor-sarah-id',
+    child_id: 'child-1',
+    title: 'CVC Sandpaper Tracing & Phonics Sound Hunt',
+    description: 'Find 3 objects around the home that start with the /s/ sound and trace the letter "s" on the tactile card with index and middle fingers.',
+    milestone_id: 'm-lit-1',
+    resource_id: 'res-2',
+    due_date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0],
+    status: 'submitted',
+    created_at: new Date(Date.now() - 86400000 * 4).toISOString(),
+    child_name: 'Leo Adeleke',
+    parent_name: 'Mrs Elizabeth Adeleke',
+    parent_email: 'elizabeth@example.com',
+    parent_profile_id: 'parent-demo-id',
+    milestone_name: 'Phonetic letter sounds (s, a, t, p, i, n)',
+    milestone_area: 'literacy',
+    resource_title: 'CVC Word Family Reading Sliders',
+    resource_url: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=800&q=80',
+  },
+  {
+    id: 'asgn-3',
+    tutor_id: 'tutor-sarah-id',
+    child_id: 'child-1',
+    title: 'Ten-Frame Counting Bears & Egg Carton Match',
+    description: 'Count 10 counters into the egg carton grid, counting one-by-one with pointing.',
+    milestone_id: 'm-num-2',
+    resource_id: null,
+    due_date: new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0],
+    status: 'reviewed',
+    created_at: new Date(Date.now() - 86400000 * 7).toISOString(),
+    child_name: 'Leo Adeleke',
+    parent_name: 'Mrs Elizabeth Adeleke',
+    parent_email: 'elizabeth@example.com',
+    parent_profile_id: 'parent-demo-id',
+    milestone_name: 'One-to-one correspondence to 10',
+    milestone_area: 'numeracy',
+  },
+  {
+    id: 'asgn-4',
+    tutor_id: 'tutor-sarah-id',
+    child_id: 'child-2',
+    title: 'Sound Shakers & Auditory Discrimination',
+    description: 'Pair two matching sound canisters (rice vs dry beans) by listening carefully to the shakes.',
+    milestone_id: 'm-lit-1',
+    resource_id: null,
+    due_date: new Date(Date.now() + 86400000 * 4).toISOString().split('T')[0],
+    status: 'assigned',
+    created_at: new Date(Date.now() - 86400000 * 1).toISOString(),
+    child_name: 'Amara Adeleke',
+    parent_name: 'Mrs Elizabeth Adeleke',
+    parent_email: 'elizabeth@example.com',
+    parent_profile_id: 'parent-demo-id',
+    milestone_name: 'Phonetic letter sounds (s, a, t, p, i, n)',
+    milestone_area: 'literacy',
+  }
+];
+
+const DEFAULT_SUBMISSIONS: AssignmentSubmission[] = [
+  {
+    id: 'sub-2',
+    assignment_id: 'asgn-2',
+    submitted_by_profile_id: 'parent-demo-id',
+    submitted_by_name: 'Mrs Elizabeth Adeleke',
+    submission_note: 'Leo found a spoon, a sock, and a sponge! He traced the letter card 5 times saying /s/ clearly. Loved this activity!',
+    submission_photo_url: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=800&q=80',
+    submitted_at: new Date(Date.now() - 86400000 * 1 + 3600000 * 2).toISOString(),
+    tutor_feedback: null,
+    reviewed_at: null,
+    milestone_marked_achieved: false,
+  },
+  {
+    id: 'sub-3',
+    assignment_id: 'asgn-3',
+    submitted_by_profile_id: 'parent-demo-id',
+    submitted_by_name: 'Mrs Elizabeth Adeleke',
+    submission_note: 'Completed with small pebbles in the egg carton. Leo counted out loud to 10 with accuracy.',
+    submission_photo_url: 'https://images.unsplash.com/photo-1587691592099-24045742c181?auto=format&fit=crop&w=800&q=80',
+    submitted_at: new Date(Date.now() - 86400000 * 3).toISOString(),
+    tutor_feedback: 'Marvelous work Leo and Elizabeth! His one-to-one correspondence is solid and fluent. Milestone confirmed and marked Achieved in curriculum tracking!',
+    reviewed_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+    milestone_marked_achieved: true,
+  }
+];
+
+const DEFAULT_ASSIGNMENT_NOTIFICATIONS: AssignmentNotification[] = [
+  {
+    id: 'asgn-notif-1',
+    recipient_email: 'elizabeth@example.com',
+    recipient_name: 'Mrs Elizabeth Adeleke',
+    event_type: 'assignment_created',
+    assignment_id: 'asgn-1',
+    title: 'New Montessori Home Activity: Montessori Scissor Cutting Strips Practice',
+    message: 'Mrs Sarah has assigned a new home activity for Leo Adeleke. Log in to your portal to view.',
+    sent_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+  },
+  {
+    id: 'asgn-notif-2',
+    recipient_email: 'sarahoakhena@gmail.com',
+    recipient_name: 'Mrs Sarah',
+    event_type: 'assignment_submitted',
+    assignment_id: 'asgn-2',
+    title: 'Homework Submitted for Review: Leo Adeleke',
+    message: 'Mrs Elizabeth Adeleke submitted homework for "CVC Sandpaper Tracing & Phonics Sound Hunt".',
+    sent_at: new Date(Date.now() - 86400000 * 1).toISOString(),
+  }
 ];
 
 const DEFAULT_INVOICES: Invoice[] = [
@@ -1733,5 +1908,338 @@ export const EYTService = {
     list.push(newMsg);
     storage.set('messages', list);
     return newMsg;
+  },
+
+  // ------------------------------------------------
+  // ASSIGNMENTS & CONTINUOUS ASSESSMENT
+  // ------------------------------------------------
+  getAssignments(childId?: string, status?: AssignmentStatus): Assignment[] {
+    const list = storage.get<Assignment[]>('assignments', DEFAULT_ASSIGNMENTS);
+    const currentUser = this.getCurrentUser();
+    const children = storage.get<Child[]>('children', DEFAULT_CHILDREN);
+    const milestones = this.getMilestones();
+    const resources = this.getResources();
+
+    let filtered: Assignment[];
+
+    if (currentUser.role === 'owner') {
+      filtered = list;
+    } else {
+      // Parent: strictly restrict to own children only
+      const parentEmail = currentUser.email?.toLowerCase().trim();
+      const myChildren = children.filter(
+        (c) =>
+          c.parent_profile_id === currentUser.id ||
+          (parentEmail && (c.parent_profile_id === `unclaimed-${parentEmail}` || c.parent_email?.toLowerCase() === parentEmail))
+      );
+      const myChildIds = new Set(myChildren.map((c) => c.id));
+      filtered = list.filter((a) => myChildIds.has(a.child_id));
+    }
+
+    if (childId && childId !== 'all') {
+      filtered = filtered.filter((a) => a.child_id === childId);
+    }
+    if (status) {
+      filtered = filtered.filter((a) => a.status === status);
+    }
+
+    // Enrich with joined child, milestone, and resource details
+    return filtered.map((a) => {
+      const child = children.find((c) => c.id === a.child_id);
+      const milestone = a.milestone_id ? milestones.find((m) => m.id === a.milestone_id) : undefined;
+      const resource = a.resource_id ? resources.find((r) => r.id === a.resource_id) : undefined;
+
+      return {
+        ...a,
+        child_name: a.child_name || child?.name || 'Student',
+        parent_name: a.parent_name || child?.parent_name || 'Parent',
+        parent_email: a.parent_email || child?.parent_email || undefined,
+        parent_profile_id: a.parent_profile_id || child?.parent_profile_id || undefined,
+        milestone_name: milestone ? milestone.name : a.milestone_name,
+        milestone_area: milestone ? milestone.subject_area : a.milestone_area,
+        resource_title: resource ? resource.title : a.resource_title,
+        resource_url: resource ? resource.file_url : a.resource_url,
+      };
+    });
+  },
+
+  getAssignmentById(id: string): { assignment: Assignment; submission?: AssignmentSubmission } | null {
+    const assignments = this.getAssignments();
+    const assignment = assignments.find((a) => a.id === id);
+    if (!assignment) return null;
+
+    const submissions = storage.get<AssignmentSubmission[]>('assignment_submissions', DEFAULT_SUBMISSIONS);
+    const submission = submissions.find((s) => s.assignment_id === id);
+
+    return { assignment, submission };
+  },
+
+  createAssignment(data: {
+    childIds: string[];
+    title: string;
+    description: string;
+    milestoneId?: string | null;
+    resourceId?: string | null;
+    dueDate?: string | null;
+  }): Assignment[] {
+    const currentUser = this.getCurrentUser();
+    if (currentUser.role !== 'owner') {
+      throw new Error('[SECURITY VIOLATION] Only Mrs Sarah can create assignments.');
+    }
+
+    if (!data.childIds || data.childIds.length === 0) {
+      throw new Error('At least one child must be selected for the assignment.');
+    }
+    if (!data.title?.trim() || !data.description?.trim()) {
+      throw new Error('Assignment title and description are required.');
+    }
+
+    const allAssignments = storage.get<Assignment[]>('assignments', DEFAULT_ASSIGNMENTS);
+    const children = storage.get<Child[]>('children', DEFAULT_CHILDREN);
+    const milestones = this.getMilestones();
+    const resources = this.getResources();
+
+    const created: Assignment[] = [];
+
+    for (const childId of data.childIds) {
+      const child = children.find((c) => c.id === childId);
+      const milestone = data.milestoneId ? milestones.find((m) => m.id === data.milestoneId) : undefined;
+      const resource = data.resourceId ? resources.find((r) => r.id === data.resourceId) : undefined;
+
+      const newAssignment: Assignment = {
+        id: `asgn-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        tutor_id: currentUser.id || 'tutor-sarah-id',
+        child_id: childId,
+        title: data.title.trim(),
+        description: data.description.trim(),
+        milestone_id: data.milestoneId || null,
+        resource_id: data.resourceId || null,
+        due_date: data.dueDate || null,
+        status: 'assigned',
+        created_at: new Date().toISOString(),
+        child_name: child?.name || 'Student',
+        parent_name: child?.parent_name || 'Parent',
+        parent_email: child?.parent_email || undefined,
+        parent_profile_id: child?.parent_profile_id || undefined,
+        milestone_name: milestone?.name,
+        milestone_area: milestone?.subject_area,
+        resource_title: resource?.title,
+        resource_url: resource?.file_url,
+      };
+
+      allAssignments.unshift(newAssignment);
+      created.push(newAssignment);
+
+      // Notify parent about new homework assignment
+      if (child?.parent_email) {
+        this.sendAssignmentNotification({
+          recipient_email: child.parent_email,
+          recipient_name: child.parent_name || 'Parent',
+          event_type: 'assignment_created',
+          assignment_id: newAssignment.id,
+          title: `New Montessori Home Activity: ${newAssignment.title}`,
+          message: `Mrs Sarah has assigned a new home activity for ${child.name}: "${newAssignment.title}". Log in to your parent portal to view guidelines and submit progress.`,
+        });
+      }
+    }
+
+    storage.set('assignments', allAssignments);
+    return created;
+  },
+
+  submitAssignment(
+    assignmentId: string,
+    data: { submissionNote: string; submissionPhotoUrl?: string | null }
+  ): AssignmentSubmission {
+    const assignments = storage.get<Assignment[]>('assignments', DEFAULT_ASSIGNMENTS);
+    const assignmentIdx = assignments.findIndex((a) => a.id === assignmentId);
+    if (assignmentIdx === -1) {
+      throw new Error('Assignment not found.');
+    }
+
+    const assignment = assignments[assignmentIdx];
+    const currentUser = this.getCurrentUser();
+
+    // Security check for parent: must be the parent of the assigned child
+    if (currentUser.role !== 'owner') {
+      const children = storage.get<Child[]>('children', DEFAULT_CHILDREN);
+      const child = children.find((c) => c.id === assignment.child_id);
+      const parentEmail = currentUser.email?.toLowerCase().trim();
+      const isAuthorized =
+        child &&
+        (child.parent_profile_id === currentUser.id ||
+          (parentEmail && (child.parent_profile_id === `unclaimed-${parentEmail}` || child.parent_email?.toLowerCase() === parentEmail)));
+
+      if (!isAuthorized) {
+        throw new Error('[SECURITY VIOLATION] You are not authorized to submit assignments for another family.');
+      }
+    }
+
+    if (!data.submissionNote?.trim()) {
+      throw new Error('Please include a brief note describing how your child completed the activity.');
+    }
+
+    // Update assignment status to submitted
+    assignments[assignmentIdx].status = 'submitted';
+    storage.set('assignments', assignments);
+
+    // Save or update submission
+    const submissions = storage.get<AssignmentSubmission[]>('assignment_submissions', DEFAULT_SUBMISSIONS);
+    const subIdx = submissions.findIndex((s) => s.assignment_id === assignmentId);
+
+    const submissionData: AssignmentSubmission = {
+      id: subIdx >= 0 ? submissions[subIdx].id : `sub-${Date.now()}`,
+      assignment_id: assignmentId,
+      submitted_by_profile_id: currentUser.id,
+      submitted_by_name: currentUser.full_name,
+      submission_note: data.submissionNote.trim(),
+      submission_photo_url: data.submissionPhotoUrl || null,
+      submitted_at: new Date().toISOString(),
+      tutor_feedback: subIdx >= 0 ? submissions[subIdx].tutor_feedback : null,
+      reviewed_at: subIdx >= 0 ? submissions[subIdx].reviewed_at : null,
+      milestone_marked_achieved: subIdx >= 0 ? submissions[subIdx].milestone_marked_achieved : false,
+    };
+
+    if (subIdx >= 0) {
+      submissions[subIdx] = submissionData;
+    } else {
+      submissions.push(submissionData);
+    }
+    storage.set('assignment_submissions', submissions);
+
+    // Notify Sarah about new homework submission awaiting review
+    this.sendAssignmentNotification({
+      recipient_email: DEFAULT_SARAH_PROFILE.email,
+      recipient_name: 'Mrs Sarah',
+      event_type: 'assignment_submitted',
+      assignment_id: assignmentId,
+      title: `Homework Submitted for Review: ${assignment.child_name || 'Student'}`,
+      message: `${currentUser.full_name} submitted homework for "${assignment.title}". Please review the notes/evidence in your Review Queue.`,
+    });
+
+    return submissionData;
+  },
+
+  reviewAssignment(
+    assignmentId: string,
+    data: { tutorFeedback: string; markMilestoneAchieved?: boolean }
+  ): Assignment {
+    const currentUser = this.getCurrentUser();
+    if (currentUser.role !== 'owner') {
+      throw new Error('[SECURITY VIOLATION] Only Mrs Sarah can review and approve assignments.');
+    }
+
+    if (!data.tutorFeedback?.trim()) {
+      throw new Error('Please provide teacher feedback for the student and parent.');
+    }
+
+    const assignments = storage.get<Assignment[]>('assignments', DEFAULT_ASSIGNMENTS);
+    const assignmentIdx = assignments.findIndex((a) => a.id === assignmentId);
+    if (assignmentIdx === -1) {
+      throw new Error('Assignment not found.');
+    }
+
+    const assignment = assignments[assignmentIdx];
+    assignment.status = 'reviewed';
+    storage.set('assignments', assignments);
+
+    const submissions = storage.get<AssignmentSubmission[]>('assignment_submissions', DEFAULT_SUBMISSIONS);
+    const subIdx = submissions.findIndex((s) => s.assignment_id === assignmentId);
+
+    const markAchieved = Boolean(data.markMilestoneAchieved);
+
+    if (subIdx >= 0) {
+      submissions[subIdx].tutor_feedback = data.tutorFeedback.trim();
+      submissions[subIdx].reviewed_at = new Date().toISOString();
+      submissions[subIdx].milestone_marked_achieved = markAchieved;
+    } else {
+      submissions.push({
+        id: `sub-${Date.now()}`,
+        assignment_id: assignmentId,
+        submitted_by_profile_id: assignment.parent_profile_id || 'parent-demo-id',
+        submitted_by_name: assignment.parent_name || 'Parent',
+        submission_note: 'Submission confirmed by tutor',
+        submission_photo_url: null,
+        submitted_at: new Date().toISOString(),
+        tutor_feedback: data.tutorFeedback.trim(),
+        reviewed_at: new Date().toISOString(),
+        milestone_marked_achieved: markAchieved,
+      });
+    }
+    storage.set('assignment_submissions', submissions);
+
+    // If milestone was marked achieved, update curriculum progress
+    if (markAchieved && assignment.milestone_id) {
+      this.updateChildMilestone(assignment.child_id, assignment.milestone_id, 'achieved', data.tutorFeedback);
+    }
+
+    // Notify parent about teacher review and feedback
+    if (assignment.parent_email) {
+      this.sendAssignmentNotification({
+        recipient_email: assignment.parent_email,
+        recipient_name: assignment.parent_name || 'Parent',
+        event_type: 'assignment_reviewed',
+        assignment_id: assignmentId,
+        title: `Mrs Sarah Reviewed: ${assignment.title}`,
+        message: `Mrs Sarah has reviewed ${assignment.child_name || 'your child'}'s homework with personalized feedback.${markAchieved ? ' Linked milestone marked as Achieved! 🎉' : ''}`,
+      });
+    }
+
+    return assignment;
+  },
+
+  getPendingReviewAssignments(): { assignment: Assignment; submission: AssignmentSubmission }[] {
+    const assignments = this.getAssignments(undefined, 'submitted');
+    const submissions = storage.get<AssignmentSubmission[]>('assignment_submissions', DEFAULT_SUBMISSIONS);
+
+    const results: { assignment: Assignment; submission: AssignmentSubmission }[] = [];
+
+    for (const assignment of assignments) {
+      const sub = submissions.find((s) => s.assignment_id === assignment.id);
+      if (sub) {
+        results.push({ assignment, submission: sub });
+      }
+    }
+
+    return results;
+  },
+
+  getAssignmentSubmissions(assignmentId?: string): AssignmentSubmission[] {
+    const submissions = storage.get<AssignmentSubmission[]>('assignment_submissions', DEFAULT_SUBMISSIONS);
+    if (!assignmentId) return submissions;
+    return submissions.filter((s) => s.assignment_id === assignmentId);
+  },
+
+  getAssignmentNotifications(email?: string): AssignmentNotification[] {
+    const list = storage.get<AssignmentNotification[]>('assignment_notifications', DEFAULT_ASSIGNMENT_NOTIFICATIONS);
+    if (!email) return list;
+    return list.filter((n) => n.recipient_email.toLowerCase() === email.toLowerCase());
+  },
+
+  sendAssignmentNotification(payload: Omit<AssignmentNotification, 'id' | 'sent_at'>): AssignmentNotification {
+    const list = storage.get<AssignmentNotification[]>('assignment_notifications', DEFAULT_ASSIGNMENT_NOTIFICATIONS);
+    const notification: AssignmentNotification = {
+      ...payload,
+      id: `asgn-notif-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      sent_at: new Date().toISOString(),
+    };
+
+    list.unshift(notification);
+    storage.set('assignment_notifications', list);
+
+    // If running in browser environment, dispatch to server API route asynchronously
+    if (typeof window !== 'undefined') {
+      try {
+        fetch('/api/assignments/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(notification),
+        }).catch(() => {});
+      } catch {
+        // Non-blocking
+      }
+    }
+
+    return notification;
   },
 };

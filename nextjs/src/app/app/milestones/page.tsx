@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { Award, CheckCircle2, BookOpen, Hash, Scissors, Globe, Palette } from 'lucide-react';
 import { useGlobal } from '@/lib/context/GlobalContext';
 import { EYTService, Milestone, Child, MilestoneStatus } from '@/lib/eyt-service';
@@ -77,23 +78,33 @@ export default function MilestonesPage() {
           </p>
         </div>
 
-        {/* Child Selector */}
-        {children.length > 1 && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-[#14263F]">Student:</span>
-            <select
-              value={selectedChildId}
-              onChange={(e) => setSelectedChildId(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-gray-300 text-xs font-bold bg-white text-[#1E4E8C] focus:ring-2 focus:ring-[#1E4E8C] outline-none"
-            >
-              {children.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} (Age {c.age_years || '—'})
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/app/assignments"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#E8F0FA] text-[#1E4E8C] hover:bg-[#d8e6f7] transition-colors border border-[#1E4E8C]/20 shadow-2xs"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-[#D4A017]" />
+            <span>{isOwner ? 'Assign & Review Homework →' : 'Home Activities & Homework →'}</span>
+          </Link>
+
+          {/* Child Selector */}
+          {children.length > 1 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-[#14263F]">Student:</span>
+              <select
+                value={selectedChildId}
+                onChange={(e) => setSelectedChildId(e.target.value)}
+                className="px-3 py-2 rounded-xl border border-gray-300 text-xs font-bold bg-white text-[#1E4E8C] focus:ring-2 focus:ring-[#1E4E8C] outline-none"
+              >
+                {children.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} (Age {c.age_years || '—'})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Loading Skeleton */}

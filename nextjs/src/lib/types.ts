@@ -13,6 +13,7 @@ export type MilestoneStatus = 'not_started' | 'in_progress' | 'achieved';
 export type SubjectArea = 'literacy' | 'numeracy' | 'practical_life' | 'cultural' | 'arts';
 export type InvoiceStatus = 'unpaid' | 'payment_submitted' | 'paid' | 'cancelled';
 export type EnquiryStatus = 'new' | 'contacted' | 'converted' | 'closed';
+export type AssignmentStatus = 'assigned' | 'submitted' | 'reviewed';
 
 export type Database = {
   __InternalSupabase: {
