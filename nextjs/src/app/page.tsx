@@ -10,6 +10,7 @@ import LearningOptionsSection from '@/components/LearningOptionsSection';
 import TestimonialsSection from '@/components/TestimonialsSection';
 import EnquiryFormSection from '@/components/EnquiryFormSection';
 import Footer from '@/components/Footer';
+import { PageTransition } from '@/components/motion';
 
 export default function Home() {
   return (
@@ -19,13 +20,15 @@ export default function Home() {
 
       {/* Main Content Sections */}
       <main className="flex-grow">
-        <HeroSection />
-        <AboutSection />
-        <WhatITutorSection />
-        <WhyLearnSection />
-        <LearningOptionsSection />
-        <TestimonialsSection />
-        <EnquiryFormSection />
+        <PageTransition>
+          <HeroSection />
+          <AboutSection />
+          <WhatITutorSection />
+          <WhyLearnSection />
+          <LearningOptionsSection />
+          <TestimonialsSection />
+          <EnquiryFormSection />
+        </PageTransition>
       </main>
 
       {/* Footer */}

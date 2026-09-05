@@ -26,6 +26,7 @@ import {
     Globe
 } from 'lucide-react';
 import { useGlobal } from '@/lib/context/GlobalContext';
+import { PageTransition } from '@/components/motion';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -133,7 +134,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
             {/* Sidebar */}
             <aside
-                className={`fixed inset-y-0 left-0 bg-white border-r border-gray-200 shadow-lg transform transition-all duration-200 ease-in-out z-40 ${
+                className={`fixed inset-y-0 left-0 bg-white border-r border-gray-200 shadow-lg transform transition-[width,transform] duration-250 ease-[cubic-bezier(0.25,0.1,0.25,1)] z-40 ${
                     isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
                 } lg:translate-x-0 flex flex-col justify-between ${
                     isCollapsed ? 'lg:w-20 w-64' : 'w-64'
@@ -303,7 +304,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </aside>
 
             {/* Main Content Area */}
-            <div className={`transition-all duration-200 flex flex-col min-h-screen ${
+            <div className={`transition-[padding] duration-250 ease-[cubic-bezier(0.25,0.1,0.25,1)] flex flex-col min-h-screen ${
                 isCollapsed ? 'lg:pl-20' : 'lg:pl-64'
             }`}>
                 {/* Top bar */}
@@ -455,7 +456,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
                 {/* Dashboard Page Content */}
                 <main className="flex-1 p-4 sm:p-6 lg:p-8">
-                    {children}
+                    <PageTransition>
+                        {children}
+                    </PageTransition>
                 </main>
 
                 {/* Dashboard Footer with Legal Compliance Links */}

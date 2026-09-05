@@ -16,9 +16,11 @@ import {
 } from 'lucide-react';
 import { useGlobal } from '@/lib/context/GlobalContext';
 import { EYTService, Invoice, Child, BankDetails } from '@/lib/eyt-service';
+import { AnimatedModal, Skeleton, useToast } from '@/components/motion';
 
 export default function InvoicesPage() {
   const { profile } = useGlobal();
+  const { showToast } = useToast();
   const isOwner = profile?.role === 'owner';
 
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -97,11 +99,13 @@ export default function InvoicesPage() {
 
     setIsCreateModalOpen(false);
     loadInvoices();
+    showToast('Invoice issued and sent to family successfully!');
   };
 
   const handleMarkPaid = (id: string) => {
     EYTService.markInvoicePaid(id);
     loadInvoices();
+    showToast('Invoice marked as paid.');
   };
 
   const handleConfirmPayment = (id: string) => {
@@ -110,6 +114,7 @@ export default function InvoicesPage() {
       setViewModalInvoice(null);
     }
     loadInvoices();
+    showToast('Payment confirmed and receipt issued.');
   };
 
   // Proof file selection
@@ -144,6 +149,7 @@ export default function InvoicesPage() {
       setProofFile(null);
       setProofPreview(null);
       loadInvoices();
+      showToast('Payment proof uploaded successfully for review!');
     } finally {
       setIsUploadingProof(false);
     }
@@ -241,14 +247,14 @@ export default function InvoicesPage() {
             <tbody className="divide-y divide-gray-100">
               {isLoading ? (
                 [1, 2, 3].map((n) => (
-                  <tr key={n} className="animate-pulse">
-                    <td className="p-4"><div className="h-4 w-24 bg-gray-200 rounded" /></td>
-                    <td className="p-4"><div className="h-4 w-32 bg-gray-200 rounded mb-1" /><div className="h-3 w-20 bg-gray-100 rounded" /></td>
-                    <td className="p-4"><div className="h-4 w-48 bg-gray-200 rounded" /></td>
-                    <td className="p-4"><div className="h-4 w-24 bg-gray-200 rounded" /></td>
-                    <td className="p-4"><div className="h-5 w-20 bg-gray-200 rounded" /></td>
-                    <td className="p-4"><div className="h-6 w-16 bg-gray-200 rounded-full" /></td>
-                    <td className="p-4 text-right"><div className="h-7 w-24 bg-gray-200 rounded ml-auto" /></td>
+                  <tr key={n}>
+                    <td className="p-4"><Skeleton className="h-4 w-24 rounded" /></td>
+                    <td className="p-4"><Skeleton className="h-4 w-32 rounded mb-1" /><Skeleton className="h-3 w-20 rounded" /></td>
+                    <td className="p-4"><Skeleton className="h-4 w-48 rounded" /></td>
+                    <td className="p-4"><Skeleton className="h-4 w-24 rounded" /></td>
+                    <td className="p-4"><Skeleton className="h-5 w-20 rounded" /></td>
+                    <td className="p-4"><Skeleton className="h-6 w-16 rounded-full" /></td>
+                    <td className="p-4 text-right"><Skeleton className="h-7 w-24 rounded ml-auto" /></td>
                   </tr>
                 ))
               ) : invoices.length === 0 ? (
@@ -434,20 +440,23 @@ export default function InvoicesPage() {
       </div>
 
       {/* CREATE INVOICE MODAL (OWNER ONLY) */}
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 relative animate-in fade-in zoom-in-95 duration-200 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <h3 className="font-heading font-bold text-lg text-[#1E4E8C]">
-                Issue Tuition Invoice
-              </h3>
-              <button
-                onClick={() => setIsCreateModalOpen(false)}
-                className="p-1 text-gray-400 hover:text-gray-700"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      <AnimatedModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        maxWidth="max-w-md"
+      >
+        <div className="bg-white rounded-2xl w-full p-6 shadow-2xl border border-gray-100 relative space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+            <h3 className="font-heading font-bold text-lg text-[#1E4E8C]">
+              Issue Tuition Invoice
+            </h3>
+            <button
+              onClick={() => setIsCreateModalOpen(false)}
+              className="p-1 text-gray-400 hover:text-gray-700"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
             <form onSubmit={handleCreateInvoice} className="space-y-4">
               <div>
@@ -536,13 +545,16 @@ export default function InvoicesPage() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+        </AnimatedModal>
 
       {/* UPLOAD PAYMENT PROOF MODAL (PARENT) */}
-      {uploadModalInvoice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 relative animate-in fade-in zoom-in-95 duration-200 space-y-4">
+      <AnimatedModal
+        isOpen={Boolean(uploadModalInvoice)}
+        onClose={() => setUploadModalInvoice(null)}
+        maxWidth="max-w-lg"
+      >
+        {uploadModalInvoice && (
+          <div className="bg-white rounded-2xl w-full p-6 shadow-2xl border border-gray-100 relative space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-gray-100">
               <div>
                 <h3 className="font-heading font-bold text-lg text-[#1E4E8C]">
@@ -660,13 +672,17 @@ export default function InvoicesPage() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatedModal>
 
       {/* VIEW / REVIEW PAYMENT PROOF MODAL */}
-      {viewModalInvoice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 relative animate-in fade-in zoom-in-95 duration-200 space-y-4">
+      <AnimatedModal
+        isOpen={Boolean(viewModalInvoice)}
+        onClose={() => setViewModalInvoice(null)}
+        maxWidth="max-w-lg"
+      >
+        {viewModalInvoice && (
+          <div className="bg-white rounded-2xl w-full p-6 shadow-2xl border border-gray-100 relative space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-gray-100">
               <div>
                 <h3 className="font-heading font-bold text-lg text-[#1E4E8C]">
@@ -751,8 +767,8 @@ export default function InvoicesPage() {
               )}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatedModal>
     </div>
   );
 }

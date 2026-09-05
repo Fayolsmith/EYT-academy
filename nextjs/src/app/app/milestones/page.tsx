@@ -5,9 +5,17 @@ import Link from 'next/link';
 import { Award, CheckCircle2, BookOpen, Hash, Scissors, Globe, Palette } from 'lucide-react';
 import { useGlobal } from '@/lib/context/GlobalContext';
 import { EYTService, Milestone, Child, MilestoneStatus } from '@/lib/eyt-service';
+import {
+  StaggerContainer,
+  StaggerItem,
+  Skeleton,
+  MilestoneAchievementBadge,
+  useToast,
+} from '@/components/motion';
 
 export default function MilestonesPage() {
   const { profile } = useGlobal();
+  const { showToast } = useToast();
   const isOwner = profile?.role === 'owner';
 
   const [children, setChildren] = useState<Child[]>([]);
@@ -15,6 +23,7 @@ export default function MilestonesPage() {
   const [selectedArea, setSelectedArea] = useState<string>('all');
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [recentAchievedId, setRecentAchievedId] = useState<string | null>(null);
 
   const loadData = useCallback(() => {
     const childList = EYTService.getChildren();
@@ -54,6 +63,13 @@ export default function MilestonesPage() {
   const handleStatusChange = (milestoneId: string, newStatus: MilestoneStatus) => {
     if (!selectedChildId) return;
     EYTService.updateChildMilestone(selectedChildId, milestoneId, newStatus);
+    if (newStatus === 'achieved') {
+      setRecentAchievedId(milestoneId);
+      showToast('🌟 Milestone marked Achieved! Developmental milestone recorded.');
+      setTimeout(() => setRecentAchievedId(null), 3500);
+    } else {
+      showToast(`Milestone marked as ${newStatus.replace('_', ' ')}.`);
+    }
     loadData();
   };
 
@@ -110,25 +126,25 @@ export default function MilestonesPage() {
       {/* Loading Skeleton */}
       {isLoading ? (
         <div className="space-y-6">
-          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm animate-pulse flex items-center justify-between">
+          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-gray-200" />
+              <Skeleton className="w-14 h-14 rounded-2xl shrink-0" />
               <div className="space-y-2">
-                <div className="h-6 w-48 bg-gray-200 rounded" />
-                <div className="h-3 w-32 bg-gray-200 rounded" />
+                <Skeleton className="h-6 w-48 rounded" />
+                <Skeleton className="h-3 w-32 rounded" />
               </div>
             </div>
             <div className="flex gap-3">
-              <div className="w-24 h-14 bg-gray-100 rounded-xl" />
-              <div className="w-24 h-14 bg-gray-100 rounded-xl" />
+              <Skeleton className="w-24 h-14 rounded-xl" />
+              <Skeleton className="w-24 h-14 rounded-xl" />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[1, 2, 3, 4].map((n) => (
-              <div key={n} className="bg-white rounded-2xl p-5 border border-gray-200 animate-pulse space-y-3">
-                <div className="h-4 w-28 bg-gray-200 rounded" />
-                <div className="h-5 w-40 bg-gray-200 rounded" />
-                <div className="h-10 bg-gray-100 rounded-xl" />
+              <div key={n} className="bg-white rounded-2xl p-5 border border-gray-200 space-y-3">
+                <Skeleton className="h-4 w-28 rounded" />
+                <Skeleton className="h-5 w-40 rounded" />
+                <Skeleton className="h-10 rounded-xl" />
               </div>
             ))}
           </div>
@@ -221,62 +237,67 @@ export default function MilestonesPage() {
           </div>
 
           {/* Milestones Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredMilestones.length === 0 ? (
-              <div className="col-span-2 p-8 text-center bg-white rounded-2xl border border-gray-200 text-xs text-[#6B7280]">
-                No milestones defined for this subject area.
-              </div>
-            ) : (
-              filteredMilestones.map((milestone) => {
-          const record = childMilestones.find((cm) => cm.milestone_id === milestone.id);
-          const currentStatus = record?.status || 'not_started';
+          {filteredMilestones.length === 0 ? (
+            <div className="p-8 text-center bg-white rounded-2xl border border-gray-200 text-xs text-[#6B7280]">
+              No milestones defined for this subject area.
+            </div>
+          ) : (
+            <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredMilestones.map((milestone) => {
+                const record = childMilestones.find((cm) => cm.milestone_id === milestone.id);
+                const currentStatus = record?.status || 'not_started';
 
-          return (
-            <div
-              key={milestone.id}
-              className={`bg-white rounded-2xl p-5 border transition-all space-y-3 ${
-                currentStatus === 'achieved'
-                  ? 'border-emerald-200 bg-emerald-50/15'
-                  : currentStatus === 'in_progress'
-                  ? 'border-amber-200 bg-amber-50/15'
-                  : 'border-gray-200'
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#E8F0FA] text-[#1E4E8C]">
-                      {milestone.subject_area.replace('_', ' ')}
-                    </span>
-                    {milestone.target_age_group && (
-                      <span className="text-[10px] text-[#6B7280]">
-                        Age {milestone.target_age_group}
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="font-heading font-bold text-base text-[#14263F]">
-                    {milestone.name}
-                  </h3>
-                  {milestone.description && (
-                    <p className="text-xs text-[#6B7280] leading-relaxed">
-                      {milestone.description}
-                    </p>
-                  )}
-                </div>
+                return (
+                  <StaggerItem key={milestone.id}>
+                    <div
+                      className={`bg-white rounded-2xl p-5 border transition-all space-y-3 h-full ${
+                        currentStatus === 'achieved'
+                          ? 'border-emerald-200 bg-emerald-50/15'
+                          : currentStatus === 'in_progress'
+                          ? 'border-amber-200 bg-amber-50/15'
+                          : 'border-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#E8F0FA] text-[#1E4E8C]">
+                              {milestone.subject_area.replace('_', ' ')}
+                            </span>
+                            {milestone.target_age_group && (
+                              <span className="text-[10px] text-[#6B7280]">
+                                Age {milestone.target_age_group}
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="font-heading font-bold text-base text-[#14263F]">
+                            {milestone.name}
+                          </h3>
+                          {milestone.description && (
+                            <p className="text-xs text-[#6B7280] leading-relaxed">
+                              {milestone.description}
+                            </p>
+                          )}
+                        </div>
 
-                {/* Status Badge */}
-                <span
-                  className={`text-[11px] font-bold px-3 py-1 rounded-full shrink-0 uppercase ${
-                    currentStatus === 'achieved'
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : currentStatus === 'in_progress'
-                      ? 'bg-amber-100 text-amber-800'
-                      : 'bg-gray-100 text-gray-600'
-                  }`}
-                >
-                  {currentStatus.replace('_', ' ')}
-                </span>
-              </div>
+                        {/* Status Badge with Achievement Moment */}
+                        {currentStatus === 'achieved' ? (
+                          <MilestoneAchievementBadge
+                            label="Achieved"
+                            isRecent={recentAchievedId === milestone.id}
+                          />
+                        ) : (
+                          <span
+                            className={`text-[11px] font-bold px-3 py-1 rounded-full shrink-0 uppercase ${
+                              currentStatus === 'in_progress'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-gray-100 text-gray-600'
+                            }`}
+                          >
+                            {currentStatus.replace('_', ' ')}
+                          </span>
+                        )}
+                      </div>
 
               {record?.notes && (
                 <div className="p-2.5 bg-white rounded-lg border border-gray-100 text-xs text-[#14263F]/90 italic">
@@ -324,9 +345,11 @@ export default function MilestonesPage() {
                 </div>
               )}
             </div>
-          );
-        }))}
-      </div>
+          </StaggerItem>
+                );
+              })}
+            </StaggerContainer>
+          )}
       </>
       )}
     </div>

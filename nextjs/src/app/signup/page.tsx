@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { BookOpen, ArrowLeft, Mail, Lock, User, Phone, ShieldCheck, AlertCircle, Calendar, Sparkles } from 'lucide-react';
 import { createSPAClient } from '@/lib/supabase/client';
 import { EYTService } from '@/lib/eyt-service';
+import { PageTransition } from '@/components/motion';
 
 function SignupForm() {
   const router = useRouter();
@@ -120,7 +121,8 @@ function SignupForm() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-[#F3F7FD]/40">
+    <PageTransition>
+      <div className="min-h-screen flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-[#F3F7FD]/40">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <Link
           href="/"
@@ -303,6 +305,7 @@ function SignupForm() {
         </div>
       </div>
     </div>
+  </PageTransition>
   );
 }
 

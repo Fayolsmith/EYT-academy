@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { BookOpen, ArrowLeft, Mail, Lock, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
 import { createSPAClient } from '@/lib/supabase/client';
 import { EYTService } from '@/lib/eyt-service';
+import { PageTransition } from '@/components/motion';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -130,7 +131,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-[#F3F7FD]/40">
+    <PageTransition>
+      <div className="min-h-screen flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-[#F3F7FD]/40">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <Link
           href="/"
@@ -321,5 +323,6 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  </PageTransition>
   );
 }

@@ -26,11 +26,13 @@ import {
   LessonMode,
   SessionReminderNotification
 } from '@/lib/eyt-service';
+import { AnimatedModal, Skeleton, useToast } from '@/components/motion';
 
 type ActiveScheduleTab = 'upcoming' | 'history' | 'availability' | 'reminders';
 
 export default function SchedulePage() {
   const { profile } = useGlobal();
+  const { showToast } = useToast();
   const isOwner = profile?.role === 'owner';
 
   // Data states
@@ -95,12 +97,14 @@ export default function SchedulePage() {
   const showSuccess = (msg: string) => {
     setSuccessMessage(msg);
     setErrorMessage(null);
+    showToast({ message: msg, type: 'success' });
     setTimeout(() => setSuccessMessage(null), 4000);
   };
 
   const showError = (msg: string) => {
     setErrorMessage(msg);
     setSuccessMessage(null);
+    showToast({ message: msg, type: 'error' });
     setTimeout(() => setErrorMessage(null), 5000);
   };
 
@@ -466,10 +470,10 @@ export default function SchedulePage() {
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[1, 2].map((n) => (
-                <div key={n} className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm animate-pulse space-y-4">
-                  <div className="h-4 w-28 bg-gray-200 rounded" />
-                  <div className="h-6 w-48 bg-gray-200 rounded" />
-                  <div className="h-10 bg-gray-100 rounded-xl" />
+                <div key={n} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-4">
+                  <Skeleton className="h-4 w-28 rounded-lg" />
+                  <Skeleton className="h-6 w-48 rounded-lg" />
+                  <Skeleton className="h-10 w-full rounded-xl" />
                 </div>
               ))}
             </div>
@@ -1029,25 +1033,28 @@ export default function SchedulePage() {
       {/* ========================================================= */}
       {/* MODAL 1: BOOK TUTORIAL SESSION (Single & Recurring)        */}
       {/* ========================================================= */}
-      {isBookModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <div>
-                <h3 className="font-heading font-bold text-xl text-[#1E4E8C]">
-                  Book Tutorial Session
-                </h3>
-                <p className="text-xs text-[#6B7280] mt-0.5">
-                  Schedule one-off sessions or recurring weekly slots with Mrs Sarah.
-                </p>
-              </div>
-              <button
-                onClick={() => setIsBookModalOpen(false)}
-                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
-              >
-                ✕
-              </button>
+      <AnimatedModal
+        isOpen={isBookModalOpen}
+        onClose={() => setIsBookModalOpen(false)}
+        maxWidth="max-w-lg"
+      >
+        <div className="p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+            <div>
+              <h3 className="font-heading font-bold text-xl text-[#1E4E8C]">
+                Book Tutorial Session
+              </h3>
+              <p className="text-xs text-[#6B7280] mt-0.5">
+                Schedule one-off sessions or recurring weekly slots with Mrs Sarah.
+              </p>
             </div>
+            <button
+              onClick={() => setIsBookModalOpen(false)}
+              className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
+            >
+              ✕
+            </button>
+          </div>
 
             <form onSubmit={handleCreateBookingSubmit} className="space-y-4 text-xs">
               {/* Child selector */}
@@ -1253,16 +1260,19 @@ export default function SchedulePage() {
                 </button>
               </div>
             </form>
-          </div>
         </div>
-      )}
+      </AnimatedModal>
 
       {/* ========================================================= */}
       {/* MODAL 2: ATTENDANCE TRACKING (Owner Only)                  */}
       {/* ========================================================= */}
-      {attendanceBooking && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+      <AnimatedModal
+        isOpen={!!attendanceBooking}
+        onClose={() => setAttendanceBooking(null)}
+        maxWidth="max-w-md"
+      >
+        {attendanceBooking && (
+          <div className="p-6 sm:p-7 space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-gray-100">
               <div>
                 <h3 className="font-heading font-bold text-lg text-[#1E4E8C]">
@@ -1413,15 +1423,19 @@ export default function SchedulePage() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatedModal>
 
       {/* ========================================================= */}
       {/* MODAL 3: RESCHEDULE OCCURRENCE                            */}
       {/* ========================================================= */}
-      {rescheduleBooking && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+      <AnimatedModal
+        isOpen={!!rescheduleBooking}
+        onClose={() => setRescheduleBooking(null)}
+        maxWidth="max-w-md"
+      >
+        {rescheduleBooking && (
+          <div className="p-6 sm:p-7 space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-gray-100">
               <div>
                 <h3 className="font-heading font-bold text-lg text-[#1E4E8C]">
@@ -1492,15 +1506,19 @@ export default function SchedulePage() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatedModal>
 
       {/* ========================================================= */}
       {/* MODAL 4: CANCEL OCCURRENCE                                */}
       {/* ========================================================= */}
-      {cancelBookingTarget && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+      <AnimatedModal
+        isOpen={!!cancelBookingTarget}
+        onClose={() => setCancelBookingTarget(null)}
+        maxWidth="max-w-md"
+      >
+        {cancelBookingTarget && (
+          <div className="p-6 sm:p-7 space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-gray-100">
               <div>
                 <h3 className="font-heading font-bold text-lg text-rose-700">
@@ -1560,15 +1578,18 @@ export default function SchedulePage() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatedModal>
 
       {/* ========================================================= */}
       {/* MODAL 5: ADD TEACHING SLOT (Owner Only)                   */}
       {/* ========================================================= */}
-      {isAddSlotModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+      <AnimatedModal
+        isOpen={isAddSlotModalOpen}
+        onClose={() => setIsAddSlotModalOpen(false)}
+        maxWidth="max-w-md"
+      >
+        <div className="p-6 sm:p-7 space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-gray-100">
               <div>
                 <h3 className="font-heading font-bold text-lg text-[#1E4E8C]">
@@ -1659,9 +1680,8 @@ export default function SchedulePage() {
                 </button>
               </div>
             </form>
-          </div>
         </div>
-      )}
+      </AnimatedModal>
     </div>
   );
 }

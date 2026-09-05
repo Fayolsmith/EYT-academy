@@ -6,9 +6,11 @@ import { Users, PlusCircle, Award, Calendar, Sparkles, CheckCircle2, Clock, Mail
 import { useGlobal } from '@/lib/context/GlobalContext';
 import { EYTService, Child } from '@/lib/eyt-service';
 import AddChildModal from '@/components/AddChildModal';
+import { StaggerContainer, StaggerItem, MotionCard, MotionButton, Skeleton, useToast } from '@/components/motion';
 
 export default function ChildrenPage() {
   const { profile } = useGlobal();
+  const { showToast } = useToast();
   const isOwner = profile?.role === 'owner';
 
   const [children, setChildren] = useState<Child[]>([]);
@@ -35,6 +37,7 @@ export default function ChildrenPage() {
   const handleChildAdded = (newChild: Child) => {
     setChildren([...children, newChild]);
     loadData();
+    showToast(isOwner ? 'Student profile enrolled successfully!' : 'Child profile registered successfully!');
   };
 
   return (
@@ -56,22 +59,22 @@ export default function ChildrenPage() {
           </p>
         </div>
 
-        <button
+        <MotionButton
           onClick={() => setIsAddChildOpen(true)}
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#D4A017] text-white font-bold text-sm hover:bg-[#A9790A] transition-all shadow-sm shadow-amber-200 self-start sm:self-auto"
         >
           <PlusCircle className="w-4 h-4" />
           {isOwner ? 'Enroll Student' : 'Add Child Profile'}
-        </button>
+        </MotionButton>
       </div>
 
       {/* Owner Info Box regarding Parent Linking */}
       {isOwner && (
         <div className="p-4 bg-[#E8F0FA]/70 border border-[#C7DAF3] rounded-2xl flex items-start gap-3 text-xs text-[#1E4E8C]">
-          <Info className="w-4 h-4 text-[#D4A017] shrink-0 mt-0.5" />
+          <Info className="w-5 h-5 text-[#D4A017] shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <span className="font-bold">Automated Parent-Child Account Linking:</span>
-            <p className="text-[#14263F]/90 leading-relaxed">
+            <p className="font-bold text-[#1E4E8C]">Montessori Learner & Parent Profile Binding</p>
+            <p className="text-gray-600 leading-relaxed">
               When you enroll a child with a parent’s email, you can immediately manage schedules, lesson notes, and milestones.
               As soon as the parent registers at <strong>/signup</strong> with that matching email, this profile will automatically connect to their Parent Portal account without creating duplicates.
             </p>
@@ -83,18 +86,18 @@ export default function ChildrenPage() {
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[1, 2].map((n) => (
-            <div key={n} className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm animate-pulse space-y-6">
+            <div key={n} className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm space-y-6">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-gray-200 shrink-0" />
+                <Skeleton className="w-16 h-16 rounded-2xl shrink-0" />
                 <div className="space-y-2 flex-1">
-                  <div className="h-6 w-36 bg-gray-200 rounded" />
-                  <div className="h-3 w-24 bg-gray-200 rounded" />
+                  <Skeleton className="h-6 w-36 rounded" />
+                  <Skeleton className="h-3 w-24 rounded" />
                 </div>
               </div>
-              <div className="h-16 bg-gray-100 rounded-2xl" />
+              <Skeleton className="h-16 rounded-2xl" />
               <div className="flex gap-2">
-                <div className="h-8 flex-1 bg-gray-100 rounded-xl" />
-                <div className="h-8 flex-1 bg-gray-100 rounded-xl" />
+                <Skeleton className="h-8 flex-1 rounded-xl" />
+                <Skeleton className="h-8 flex-1 rounded-xl" />
               </div>
             </div>
           ))}
@@ -112,41 +115,41 @@ export default function ChildrenPage() {
               ? 'Enroll your existing tutorial students and connect them with their parent contacts to begin tracking milestones.'
               : 'Add your child’s profile to get started with tailored Montessori lessons, milestone tracking, and lesson scheduling.'}
           </p>
-          <button
+          <MotionButton
             onClick={() => setIsAddChildOpen(true)}
             className="px-5 py-2.5 rounded-xl bg-[#D4A017] text-white font-bold text-sm hover:bg-[#A9790A] transition-all"
           >
             {isOwner ? 'Enroll First Student' : 'Register First Child'}
-          </button>
+          </MotionButton>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {children.map((child) => {
             const childMilestones = EYTService.getChildMilestones(child.id);
             const achievedCount = childMilestones.filter((m) => m.status === 'achieved').length;
             const inProgressCount = childMilestones.filter((m) => m.status === 'in_progress').length;
 
             return (
-              <div
-                key={child.id}
-                className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:border-[#D4A017] transition-all space-y-4 flex flex-col justify-between"
-              >
-                <div className="space-y-4">
-                  {/* Top Bar */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3">
-                      {child.avatar_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={child.avatar_url}
-                          alt={child.name}
-                          className="w-12 h-12 rounded-2xl object-cover border border-[#D4A017] shadow-xs shrink-0"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-2xl bg-[#1E4E8C] text-[#D4A017] font-heading font-bold text-xl flex items-center justify-center shadow-xs shrink-0">
-                          {child.name.charAt(0)}
-                        </div>
-                      )}
+              <StaggerItem key={child.id}>
+                <MotionCard
+                  className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:border-[#D4A017] hover:shadow-md transition-all space-y-4 flex flex-col justify-between h-full"
+                >
+                  <div className="space-y-4">
+                    {/* Top Bar */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-3">
+                        {child.avatar_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={child.avatar_url}
+                            alt={child.name}
+                            className="w-12 h-12 rounded-2xl object-cover border border-[#D4A017] shadow-xs shrink-0"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-2xl bg-[#1E4E8C] text-[#D4A017] font-heading font-bold text-xl flex items-center justify-center shadow-xs shrink-0">
+                            {child.name.charAt(0)}
+                          </div>
+                        )}
                       <div>
                         <h2 className="font-heading text-lg font-bold text-[#14263F]">
                           {child.name}
@@ -272,10 +275,11 @@ export default function ChildrenPage() {
                     <span>{isOwner ? 'Schedule Slot' : 'Schedule Tutorial'}</span>
                   </Link>
                 </div>
-              </div>
+              </MotionCard>
+            </StaggerItem>
             );
           })}
-        </div>
+        </StaggerContainer>
       )}
 
       {/* Add Child Modal */}

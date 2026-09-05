@@ -3,17 +3,16 @@
 import React, { useState, useRef } from 'react';
 import { X, UserPlus, Mail, Phone, User, Sparkles, ShieldCheck, Camera, Trash2 } from 'lucide-react';
 import { EYTService, Child } from '@/lib/eyt-service';
+import { AnimatedModal } from '@/components/motion';
 
 interface AddChildModalProps {
   isOpen: boolean;
   onClose: () => void;
   onChildAdded: (child: Child) => void;
+  isOwner?: boolean;
 }
 
-export default function AddChildModal({ isOpen, onClose, onChildAdded }: AddChildModalProps) {
-  const currentUser = EYTService.getCurrentUser();
-  const isOwner = currentUser?.role === 'owner';
-
+export default function AddChildModal({ isOpen, onClose, onChildAdded, isOwner = false }: AddChildModalProps) {
   // Parent contact fields (required when Owner adds profile)
   const [parentName, setParentName] = useState('');
   const [parentEmail, setParentEmail] = useState('');
@@ -33,8 +32,6 @@ export default function AddChildModal({ isOpen, onClose, onChildAdded }: AddChil
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-
-  if (!isOpen) return null;
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -131,12 +128,8 @@ export default function AddChildModal({ isOpen, onClose, onChildAdded }: AddChil
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs overflow-y-auto"
-    >
-      <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl border border-gray-100 relative my-8 animate-in fade-in zoom-in-95 duration-200">
+    <AnimatedModal isOpen={isOpen} onClose={onClose} maxWidth="max-w-lg">
+      <div className="bg-white rounded-3xl w-full p-6 sm:p-7 shadow-2xl border border-gray-100 relative my-8">
         
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-gray-100">
@@ -386,6 +379,6 @@ export default function AddChildModal({ isOpen, onClose, onChildAdded }: AddChil
         </form>
 
       </div>
-    </div>
+    </AnimatedModal>
   );
 }
