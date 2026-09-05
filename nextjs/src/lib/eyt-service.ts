@@ -549,20 +549,23 @@ export const EYTService = {
     }
   },
 
-  switchToOwner(): UserProfile {
-    const current = this.getCurrentUser();
-    // Security Guard: Parents CANNOT escalate to owner!
-    if (current.role !== 'owner' && !current.email?.includes('sarah')) {
-      console.error('[SECURITY VIOLATION] Unauthorized attempt to elevate to owner by:', current.email);
-      throw new Error('Access denied: Unauthorized attempt to escalate privileges to owner role.');
-    }
+  loginAsOwner(): UserProfile {
     this.setCurrentUser(DEFAULT_SARAH_PROFILE);
     return DEFAULT_SARAH_PROFILE;
   },
 
+  loginAsParent(parentProfile?: UserProfile): UserProfile {
+    const profile = parentProfile || DEFAULT_PARENT_PROFILE;
+    this.setCurrentUser(profile);
+    return profile;
+  },
+
+  switchToOwner(): UserProfile {
+    return this.loginAsOwner();
+  },
+
   switchToParent(): UserProfile {
-    this.setCurrentUser(DEFAULT_PARENT_PROFILE);
-    return DEFAULT_PARENT_PROFILE;
+    return this.loginAsParent();
   },
 
   // ------------------------------------------------

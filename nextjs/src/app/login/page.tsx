@@ -1,14 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { BookOpen, ArrowLeft, Mail, Lock, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
 import { createSPAClient } from '@/lib/supabase/client';
 import { EYTService } from '@/lib/eyt-service';
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState<'password' | 'magic_link'>('password');
@@ -65,18 +63,18 @@ export default function LoginPage() {
           });
 
           // Redirect based on role
-          router.push('/app');
+          window.location.href = '/app';
           return;
         }
       } else {
         // Fallback when Supabase keys are not set up yet
         const cleanEmail = email.toLowerCase().trim();
         if (cleanEmail === 'sarahoakhena@gmail.com' || cleanEmail === 'sarahofure45@gmail.com' || cleanEmail.includes('sarah')) {
-          EYTService.switchToOwner();
+          EYTService.loginAsOwner();
         } else {
-          EYTService.switchToParent();
+          EYTService.loginAsParent();
         }
-        router.push('/app');
+        window.location.href = '/app';
       }
     } catch (err) {
       if (err instanceof Error) {
@@ -122,13 +120,13 @@ export default function LoginPage() {
     if (role === 'owner') {
       setEmail('sarahoakhena@gmail.com');
       setPassword('admin123');
-      EYTService.switchToOwner();
+      EYTService.loginAsOwner();
     } else {
       setEmail('elizabeth@example.com');
       setPassword('parent123');
-      EYTService.switchToParent();
+      EYTService.loginAsParent();
     }
-    router.push('/app');
+    window.location.href = '/app';
   };
 
   return (
