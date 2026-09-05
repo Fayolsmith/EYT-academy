@@ -455,6 +455,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <main className="flex-1 p-4 sm:p-6 lg:p-8">
                     {children}
                 </main>
+
+                {/* Dashboard Footer with Legal Compliance Links */}
+                <footer className="py-4 px-4 sm:px-8 border-t border-gray-200/80 bg-white/60 text-[11px] text-[#6B7280] flex flex-col sm:flex-row items-center justify-between gap-2">
+                    <div>
+                        © {new Date().getFullYear()} Mrs Sarah Early Years Tutoring Platform • Lagos, Nigeria
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            NDPA 2023 Compliant
+                        </span>
+                        <Link href="/privacy-policy" className="hover:text-[#1E4E8C] transition-colors underline">
+                            Child Privacy Policy
+                        </Link>
+                        <span>•</span>
+                        <Link href="/terms" className="hover:text-[#1E4E8C] transition-colors underline">
+                            Terms of Service
+                        </Link>
+                    </div>
+                </footer>
             </div>
         </div>
     );

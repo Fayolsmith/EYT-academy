@@ -77,27 +77,27 @@ export default function Footer() {
           {/* Col 4: Portals & Access */}
           <div className="space-y-3">
             <h4 className="font-heading text-sm font-bold uppercase tracking-wider text-[#D4A017]">
-              Platform Access
+              Platform & Legal
             </h4>
             <ul className="space-y-2 text-sm text-blue-100/70">
               <li>
-                <Link href="/app" className="hover:text-white transition-colors">
-                  Parent Portal
+                <Link href="/login" className="hover:text-white transition-colors">
+                  Parent & Tutor Sign In
                 </Link>
               </li>
               <li>
-                <Link href="/app" className="hover:text-white transition-colors">
-                  Tutor / Owner Dashboard
-                </Link>
-              </li>
-              <li>
-                <Link href="/auth/login" className="hover:text-white transition-colors">
-                  Parent Sign In
-                </Link>
-              </li>
-              <li>
-                <Link href="/auth/register" className="hover:text-white transition-colors">
+                <Link href="/signup" className="hover:text-white transition-colors">
                   Create Parent Account
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy-policy" className="hover:text-white transition-colors flex items-center gap-1.5 text-xs text-[#D4A017] font-semibold">
+                  Privacy Policy (NDPA 2023)
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms" className="hover:text-white transition-colors text-xs text-blue-100/90 font-medium">
+                  Terms of Service
                 </Link>
               </li>
             </ul>
@@ -137,13 +137,21 @@ export default function Footer() {
 
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-blue-100/60">
-          <div>
-            © {new Date().getFullYear()} Mrs Sarah Early Years Tutoring Platform. All rights reserved.
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <span>© {new Date().getFullYear()} Mrs Sarah Early Years Tutoring Platform. All rights reserved.</span>
+            <span>•</span>
+            <Link href="/privacy-policy" className="hover:text-white underline">
+              Privacy Policy
+            </Link>
+            <span>•</span>
+            <Link href="/terms" className="hover:text-white underline">
+              Terms of Service
+            </Link>
           </div>
           
           <button
             onClick={scrollToTop}
-            className="flex items-center gap-1 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg border border-white/10"
+            className="flex items-center gap-1 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg border border-white/10 shrink-0"
           >
             <span>Back to top</span>
             <ArrowUp className="w-3.5 h-3.5" />

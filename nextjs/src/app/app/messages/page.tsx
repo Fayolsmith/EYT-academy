@@ -10,15 +10,21 @@ export default function MessagesPage() {
   const isOwner = profile?.role === 'owner';
 
   const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [inputText, setInputText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const loadMessages = () => {
     setMessages(EYTService.getMessages());
+    setIsLoading(false);
   };
 
   useEffect(() => {
-    loadMessages();
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      loadMessages();
+    }, 150);
+    return () => clearTimeout(timer);
   }, [profile]);
 
   useEffect(() => {
@@ -89,33 +95,60 @@ export default function MessagesPage() {
 
         {/* Message Thread */}
         <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-[#F3F7FD]/30">
-          {messages.map((msg) => {
-            const isMe = msg.sender_profile_id === profile?.id;
-            return (
-              <div
-                key={msg.id}
-                className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[11px] font-bold text-[#14263F]">
-                    {msg.sender_name || (isMe ? 'You' : 'Mrs Sarah')}
-                  </span>
-                  <span className="text-[10px] text-[#6B7280]">
-                    {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-                <div
-                  className={`max-w-md p-4 rounded-2xl text-xs sm:text-sm leading-relaxed ${
-                    isMe
-                      ? 'bg-[#1E4E8C] text-white rounded-br-none shadow-xs'
-                      : 'bg-white text-[#14263F] border border-gray-200 rounded-bl-none shadow-xs'
-                  }`}
-                >
-                  {msg.body}
-                </div>
+          {isLoading ? (
+            <div className="space-y-4 py-8">
+              <div className="flex flex-col items-start space-y-2 animate-pulse max-w-sm">
+                <div className="h-3 w-20 bg-gray-200 rounded" />
+                <div className="h-14 w-64 bg-gray-200 rounded-2xl rounded-bl-none" />
               </div>
-            );
-          })}
+              <div className="flex flex-col items-end space-y-2 animate-pulse ml-auto max-w-sm">
+                <div className="h-3 w-20 bg-gray-200 rounded" />
+                <div className="h-12 w-72 bg-blue-100 rounded-2xl rounded-br-none" />
+              </div>
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-[#E8F0FA] flex items-center justify-center text-[#1E4E8C]">
+                <MessageSquare className="w-6 h-6 text-[#D4A017]" />
+              </div>
+              <h4 className="font-heading font-bold text-base text-[#14263F]">
+                No Messages Yet
+              </h4>
+              <p className="text-xs text-[#6B7280] max-w-sm">
+                {isOwner
+                  ? 'Send a warm update, session observation, or learning milestone feedback to the parent below.'
+                  : 'Have a question or update about your child’s tutoring? Send Mrs Sarah a message using the form below.'}
+              </p>
+            </div>
+          ) : (
+            messages.map((msg) => {
+              const isMe = msg.sender_profile_id === profile?.id;
+              return (
+                <div
+                  key={msg.id}
+                  className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[11px] font-bold text-[#14263F]">
+                      {msg.sender_name || (isMe ? 'You' : 'Mrs Sarah')}
+                    </span>
+                    <span className="text-[10px] text-[#6B7280]">
+                      {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <div
+                    className={`max-w-md p-4 rounded-2xl text-xs sm:text-sm leading-relaxed ${
+                      isMe
+                        ? 'bg-[#1E4E8C] text-white rounded-br-none shadow-xs'
+                        : 'bg-white text-[#14263F] border border-gray-200 rounded-bl-none shadow-xs'
+                    }`}
+                  >
+                    {msg.body}
+                  </div>
+                </div>
+              );
+            })
+          )}
           <div ref={messagesEndRef} />
         </div>
 

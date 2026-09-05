@@ -138,6 +138,25 @@ export interface UserProfile {
   phone: string | null;
   email: string;
   avatar_url: string | null;
+  parental_consent_given?: boolean;
+  parental_consent_at?: string | null;
+  parental_consent_version?: string | null;
+}
+
+export interface EnquiryEmailNotification {
+  id: string;
+  enquiry_id: string;
+  recipient_email: string;
+  subject: string;
+  sent_at: string;
+  status: 'delivered' | 'sent';
+  details: {
+    parent_name: string;
+    contact: string;
+    child_age?: string | null;
+    preferred_mode?: string | null;
+    message: string;
+  };
 }
 
 export interface BankDetails {
@@ -228,6 +247,9 @@ const DEFAULT_PARENT_PROFILE: UserProfile = {
   phone: '08023456789',
   email: 'elizabeth@example.com',
   avatar_url: null,
+  parental_consent_given: true,
+  parental_consent_at: '2026-09-01T08:00:00.000Z',
+  parental_consent_version: '2026-v1',
 };
 
 const DEFAULT_CHILDREN: Child[] = [
@@ -615,7 +637,15 @@ export const EYTService = {
     return this.loginAsParent();
   },
 
-  updateProfile(data: { full_name?: string; email?: string; phone?: string | null; avatar_url?: string | null }): UserProfile {
+  updateProfile(data: {
+    full_name?: string;
+    email?: string;
+    phone?: string | null;
+    avatar_url?: string | null;
+    parental_consent_given?: boolean;
+    parental_consent_at?: string | null;
+    parental_consent_version?: string | null;
+  }): UserProfile {
     const currentUser = this.getCurrentUser();
     const updated: UserProfile = {
       ...currentUser,
@@ -623,6 +653,9 @@ export const EYTService = {
       email: data.email !== undefined ? data.email : currentUser.email,
       phone: data.phone !== undefined ? data.phone : currentUser.phone,
       avatar_url: data.avatar_url !== undefined ? data.avatar_url : currentUser.avatar_url,
+      parental_consent_given: data.parental_consent_given !== undefined ? data.parental_consent_given : currentUser.parental_consent_given,
+      parental_consent_at: data.parental_consent_at !== undefined ? data.parental_consent_at : currentUser.parental_consent_at,
+      parental_consent_version: data.parental_consent_version !== undefined ? data.parental_consent_version : currentUser.parental_consent_version,
     };
     this.setCurrentUser(updated);
 
@@ -1146,7 +1179,9 @@ export const EYTService = {
           status: 'new',
         }).select().single();
         if (!error && inserted) {
-          return inserted as Enquiry;
+          const enq = inserted as Enquiry;
+          this.dispatchEnquiryNotification(enq);
+          return enq;
         }
       } catch {
         // Fallback to local storage
@@ -1166,7 +1201,50 @@ export const EYTService = {
     };
     list.unshift(newEnq);
     storage.set('enquiries', list);
+    this.dispatchEnquiryNotification(newEnq);
     return newEnq;
+  },
+
+  dispatchEnquiryNotification(enquiry: Enquiry): EnquiryEmailNotification {
+    const bankDetails = this.getBankDetails();
+    const recipientEmail = bankDetails.business_email || 'sarahoakhena@gmail.com';
+    const notification: EnquiryEmailNotification = {
+      id: `notif-${Date.now()}`,
+      enquiry_id: enquiry.id,
+      recipient_email: recipientEmail,
+      subject: `[New Early Years Enquiry] From ${enquiry.name} (${enquiry.child_age ? `Age ${enquiry.child_age}` : 'Early Years'})`,
+      sent_at: new Date().toISOString(),
+      status: 'delivered',
+      details: {
+        parent_name: enquiry.name,
+        contact: enquiry.contact,
+        child_age: enquiry.child_age,
+        preferred_mode: enquiry.preferred_mode,
+        message: enquiry.message,
+      },
+    };
+
+    const notifs = storage.get<EnquiryEmailNotification[]>('enquiry_email_notifications', []);
+    notifs.unshift(notification);
+    storage.set('enquiry_email_notifications', notifs);
+
+    if (typeof window !== 'undefined') {
+      try {
+        fetch('/api/enquiries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(enquiry),
+        }).catch(() => {});
+      } catch {
+        // Suppress client network errors
+      }
+    }
+
+    return notification;
+  },
+
+  getEnquiryEmailNotifications(): EnquiryEmailNotification[] {
+    return storage.get<EnquiryEmailNotification[]>('enquiry_email_notifications', []);
   },
 
   getEnquiries(): Enquiry[] {

@@ -13,6 +13,7 @@ export default function MilestonesPage() {
   const [selectedChildId, setSelectedChildId] = useState<string>('');
   const [selectedArea, setSelectedArea] = useState<string>('all');
   const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadData = useCallback(() => {
     const childList = EYTService.getChildren();
@@ -21,10 +22,15 @@ export default function MilestonesPage() {
       setSelectedChildId(childList[0].id);
     }
     setMilestones(EYTService.getMilestones());
+    setIsLoading(false);
   }, [selectedChildId]);
 
   useEffect(() => {
-    loadData();
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      loadData();
+    }, 150);
+    return () => clearTimeout(timer);
   }, [profile, loadData]);
 
   const subjectAreas: { key: string; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -90,78 +96,127 @@ export default function MilestonesPage() {
         )}
       </div>
 
-      {/* Child Summary Card */}
-      {selectedChild && (
-        <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div className="flex items-center gap-4">
-            {selectedChild.avatar_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={selectedChild.avatar_url}
-                alt={selectedChild.name}
-                className="w-14 h-14 rounded-2xl object-cover border border-[#D4A017] shadow-xs shrink-0"
-              />
-            ) : (
-              <div className="w-14 h-14 rounded-2xl bg-[#1E4E8C] text-[#D4A017] font-heading font-bold text-2xl flex items-center justify-center border border-[#D4A017] shrink-0">
-                {selectedChild.name.charAt(0)}
+      {/* Loading Skeleton */}
+      {isLoading ? (
+        <div className="space-y-6">
+          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm animate-pulse flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gray-200" />
+              <div className="space-y-2">
+                <div className="h-6 w-48 bg-gray-200 rounded" />
+                <div className="h-3 w-32 bg-gray-200 rounded" />
               </div>
-            )}
-            <div>
-              <h2 className="font-heading text-xl font-bold text-[#14263F]">
-                {selectedChild.name}&apos;s Learning Journey
-              </h2>
-              <p className="text-xs text-[#6B7280]">
-                Montessori Early Years • Age {selectedChild.age_years || '3-8'}
-              </p>
+            </div>
+            <div className="flex gap-3">
+              <div className="w-24 h-14 bg-gray-100 rounded-xl" />
+              <div className="w-24 h-14 bg-gray-100 rounded-xl" />
             </div>
           </div>
-
-          <div className="flex items-center gap-4 text-xs font-semibold">
-            <div className="p-3 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-100 text-center">
-              <span className="block text-lg font-bold">
-                {childMilestones.filter((m) => m.status === 'achieved').length}
-              </span>
-              Skills Achieved
-            </div>
-            <div className="p-3 bg-amber-50 text-amber-800 rounded-xl border border-amber-100 text-center">
-              <span className="block text-lg font-bold">
-                {childMilestones.filter((m) => m.status === 'in_progress').length}
-              </span>
-              In Progress
-            </div>
-            <div className="p-3 bg-blue-50 text-[#1E4E8C] rounded-xl border border-blue-100 text-center">
-              <span className="block text-lg font-bold">{milestones.length}</span>
-              Total Curriculum
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map((n) => (
+              <div key={n} className="bg-white rounded-2xl p-5 border border-gray-200 animate-pulse space-y-3">
+                <div className="h-4 w-28 bg-gray-200 rounded" />
+                <div className="h-5 w-40 bg-gray-200 rounded" />
+                <div className="h-10 bg-gray-100 rounded-xl" />
+              </div>
+            ))}
           </div>
         </div>
-      )}
+      ) : children.length === 0 ? (
+        <div className="p-12 text-center bg-white rounded-3xl border border-gray-200 shadow-xs space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-[#E8F0FA] flex items-center justify-center mx-auto text-[#1E4E8C]">
+            <Award className="w-7 h-7 text-[#D4A017]" />
+          </div>
+          <div className="max-w-md mx-auto">
+            <h3 className="font-heading font-bold text-lg text-[#14263F]">
+              No Children Profiles Found
+            </h3>
+            <p className="text-xs text-[#6B7280] mt-1.5 leading-relaxed">
+              {isOwner
+                ? 'To track Montessori milestones, add student profiles under My Children or link them during registration.'
+                : 'To view developmental milestones, please add your child’s profile under My Children in your dashboard.'}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Child Summary Card */}
+          {selectedChild && (
+            <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+              <div className="flex items-center gap-4">
+                {selectedChild.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={selectedChild.avatar_url}
+                    alt={selectedChild.name}
+                    className="w-14 h-14 rounded-2xl object-cover border border-[#D4A017] shadow-xs shrink-0"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-2xl bg-[#1E4E8C] text-[#D4A017] font-heading font-bold text-2xl flex items-center justify-center border border-[#D4A017] shrink-0">
+                    {selectedChild.name.charAt(0)}
+                  </div>
+                )}
+                <div>
+                  <h2 className="font-heading text-xl font-bold text-[#14263F]">
+                    {selectedChild.name}&apos;s Learning Journey
+                  </h2>
+                  <p className="text-xs text-[#6B7280]">
+                    Montessori Early Years • Age {selectedChild.age_years || '3-8'}
+                  </p>
+                </div>
+              </div>
 
-      {/* Subject Filter Pills */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2">
-        {subjectAreas.map((area) => {
-          const Icon = area.icon;
-          const isActive = selectedArea === area.key;
-          return (
-            <button
-              key={area.key}
-              onClick={() => setSelectedArea(area.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
-                isActive
-                  ? 'bg-[#1E4E8C] text-white shadow-sm'
-                  : 'bg-white text-[#14263F] border border-gray-200 hover:bg-[#E8F0FA]'
-              }`}
-            >
-              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#D4A017]' : 'text-[#6B7280]'}`} />
-              <span>{area.label}</span>
-            </button>
-          );
-        })}
-      </div>
+              <div className="flex items-center gap-4 text-xs font-semibold">
+                <div className="p-3 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-100 text-center">
+                  <span className="block text-lg font-bold">
+                    {childMilestones.filter((m) => m.status === 'achieved').length}
+                  </span>
+                  Skills Achieved
+                </div>
+                <div className="p-3 bg-amber-50 text-amber-800 rounded-xl border border-amber-100 text-center">
+                  <span className="block text-lg font-bold">
+                    {childMilestones.filter((m) => m.status === 'in_progress').length}
+                  </span>
+                  In Progress
+                </div>
+                <div className="p-3 bg-blue-50 text-[#1E4E8C] rounded-xl border border-blue-100 text-center">
+                  <span className="block text-lg font-bold">{milestones.length}</span>
+                  Total Curriculum
+                </div>
+              </div>
+            </div>
+          )}
 
-      {/* Milestones Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredMilestones.map((milestone) => {
+          {/* Subject Filter Pills */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            {subjectAreas.map((area) => {
+              const Icon = area.icon;
+              const isActive = selectedArea === area.key;
+              return (
+                <button
+                  key={area.key}
+                  onClick={() => setSelectedArea(area.key)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                    isActive
+                      ? 'bg-[#1E4E8C] text-white shadow-sm'
+                      : 'bg-white text-[#14263F] border border-gray-200 hover:bg-[#E8F0FA]'
+                  }`}
+                >
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#D4A017]' : 'text-[#6B7280]'}`} />
+                  <span>{area.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Milestones Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filteredMilestones.length === 0 ? (
+              <div className="col-span-2 p-8 text-center bg-white rounded-2xl border border-gray-200 text-xs text-[#6B7280]">
+                No milestones defined for this subject area.
+              </div>
+            ) : (
+              filteredMilestones.map((milestone) => {
           const record = childMilestones.find((cm) => cm.milestone_id === milestone.id);
           const currentStatus = record?.status || 'not_started';
 
@@ -259,8 +314,10 @@ export default function MilestonesPage() {
               )}
             </div>
           );
-        })}
+        }))}
       </div>
+      </>
+      )}
     </div>
   );
 }

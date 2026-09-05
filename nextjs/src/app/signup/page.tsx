@@ -17,6 +17,7 @@ function SignupForm() {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [consentGiven, setConsentGiven] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -29,10 +30,16 @@ function SignupForm() {
       return;
     }
 
+    if (!consentGiven) {
+      setError("You must consent to your child's personal data being collected and processed as described in the Privacy Policy to create an account.");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const normalizedEmail = email.trim().toLowerCase();
+      const consentTimestamp = new Date().toISOString();
       let newUserId = '';
 
       if (EYTService.isSupabaseConfigured()) {
@@ -46,6 +53,9 @@ function SignupForm() {
               full_name: fullName.trim(),
               phone: phone.trim(),
               role: 'parent', // Enforced parent role
+              parental_consent_given: true,
+              parental_consent_at: consentTimestamp,
+              parental_consent_version: '2026-v1',
             },
           },
         });
@@ -61,6 +71,9 @@ function SignupForm() {
             email: normalizedEmail,
             phone: phone.trim() || null,
             avatar_url: null,
+            parental_consent_given: true,
+            parental_consent_at: consentTimestamp,
+            parental_consent_version: '2026-v1',
           });
         }
       } else {
@@ -73,6 +86,9 @@ function SignupForm() {
           phone: phone.trim() || null,
           email: normalizedEmail,
           avatar_url: null,
+          parental_consent_given: true,
+          parental_consent_at: consentTimestamp,
+          parental_consent_version: '2026-v1',
         });
       }
 
@@ -230,9 +246,39 @@ function SignupForm() {
               </div>
             </div>
 
+            {/* Nigeria Data Protection Act 2023 - Mandatory Parental Consent */}
+            <div className="pt-1 pb-1">
+              <label className="flex items-start gap-3 p-3.5 rounded-2xl bg-[#FCFBF7] border border-[#F3E7C4] cursor-pointer text-xs text-[#14263F] leading-relaxed select-none hover:border-[#1E4E8C] transition-colors">
+                <input
+                  type="checkbox"
+                  required
+                  checked={consentGiven}
+                  onChange={(e) => setConsentGiven(e.target.checked)}
+                  className="mt-0.5 rounded border-gray-300 text-[#1E4E8C] focus:ring-[#1E4E8C] h-4 w-4 shrink-0"
+                />
+                <span>
+                  I confirm I am the parent or legal guardian, and <strong>I consent to my child&apos;s personal data being collected and processed as described in the{' '}
+                  <Link
+                    href="/privacy-policy"
+                    target="_blank"
+                    className="font-bold text-[#1E4E8C] hover:underline"
+                  >
+                    Privacy Policy
+                  </Link></strong> and{' '}
+                  <Link
+                    href="/terms"
+                    target="_blank"
+                    className="font-bold text-[#1E4E8C] hover:underline"
+                  >
+                    Terms of Service
+                  </Link>.
+                </span>
+              </label>
+            </div>
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !consentGiven}
               className="w-full mt-2 py-3.5 px-4 rounded-xl bg-[#1E4E8C] text-white font-bold text-sm hover:bg-[#153763] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1E4E8C] transition-all shadow-md shadow-blue-200/50 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (

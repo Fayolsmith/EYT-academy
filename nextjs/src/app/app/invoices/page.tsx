@@ -22,6 +22,7 @@ export default function InvoicesPage() {
   const isOwner = profile?.role === 'owner';
 
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [enrolledChildren, setEnrolledChildren] = useState<Child[]>([]);
   const [bankDetails, setBankDetails] = useState<BankDetails>(() => EYTService.getBankDetails());
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -56,11 +57,16 @@ export default function InvoicesPage() {
   }, [selectedChildId]);
 
   useEffect(() => {
-    loadInvoices();
-    setBankDetails(EYTService.getBankDetails());
-    if (isOwner) {
-      loadChildren();
-    }
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      loadInvoices();
+      setBankDetails(EYTService.getBankDetails());
+      if (isOwner) {
+        loadChildren();
+      }
+      setIsLoading(false);
+    }, 150);
+    return () => clearTimeout(timer);
   }, [profile, isOwner, loadInvoices, loadChildren]);
 
   // Handle Child selection in Create Invoice modal
@@ -233,10 +239,43 @@ export default function InvoicesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {invoices.length === 0 ? (
+              {isLoading ? (
+                [1, 2, 3].map((n) => (
+                  <tr key={n} className="animate-pulse">
+                    <td className="p-4"><div className="h-4 w-24 bg-gray-200 rounded" /></td>
+                    <td className="p-4"><div className="h-4 w-32 bg-gray-200 rounded mb-1" /><div className="h-3 w-20 bg-gray-100 rounded" /></td>
+                    <td className="p-4"><div className="h-4 w-48 bg-gray-200 rounded" /></td>
+                    <td className="p-4"><div className="h-4 w-24 bg-gray-200 rounded" /></td>
+                    <td className="p-4"><div className="h-5 w-20 bg-gray-200 rounded" /></td>
+                    <td className="p-4"><div className="h-6 w-16 bg-gray-200 rounded-full" /></td>
+                    <td className="p-4 text-right"><div className="h-7 w-24 bg-gray-200 rounded ml-auto" /></td>
+                  </tr>
+                ))
+              ) : invoices.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-[#6B7280]">
-                    No invoices found.
+                  <td colSpan={7} className="p-12 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="w-12 h-12 rounded-2xl bg-[#E8F0FA] flex items-center justify-center text-[#1E4E8C]">
+                        <CreditCard className="w-6 h-6 text-[#D4A017]" />
+                      </div>
+                      <div className="font-heading font-bold text-base text-[#14263F]">
+                        No Invoices Issued Yet
+                      </div>
+                      <p className="text-xs text-[#6B7280] max-w-sm">
+                        {isOwner
+                          ? 'You have not created any tuition invoices yet. Click "Issue New Invoice" to bill an enrolled family.'
+                          : 'You currently have no pending or past tuition invoices. When Mrs Sarah bills your tutorial package, it will appear here.'}
+                      </p>
+                      {isOwner && (
+                        <button
+                          onClick={() => setIsCreateModalOpen(true)}
+                          className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1E4E8C] text-white font-bold text-xs hover:bg-[#153763] transition-all"
+                        >
+                          <PlusCircle className="w-4 h-4 text-[#D4A017]" />
+                          Issue First Invoice
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (

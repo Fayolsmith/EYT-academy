@@ -11,6 +11,7 @@ export default function ResourcesPage() {
   const isOwner = profile?.role === 'owner';
 
   const [resources, setResources] = useState<Resource[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
@@ -27,10 +28,15 @@ export default function ResourcesPage() {
 
   const loadResources = useCallback(() => {
     setResources(EYTService.getResources());
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
-    loadResources();
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      loadResources();
+    }, 150);
+    return () => clearTimeout(timer);
   }, [profile, loadResources]);
 
   const handleFileSelect = (file: File) => {
@@ -160,10 +166,44 @@ export default function ResourcesPage() {
 
       {/* Resources Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredResources.length === 0 ? (
-          <div className="col-span-full bg-white rounded-2xl p-12 text-center border border-gray-200 text-[#6B7280]">
-            <FileText className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-            <p className="font-semibold text-sm">No resources in this subject area yet.</p>
+        {isLoading ? (
+          [1, 2, 3].map((n) => (
+            <div key={n} className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm animate-pulse space-y-4">
+              <div className="flex justify-between items-center">
+                <div className="w-10 h-10 rounded-xl bg-gray-200" />
+                <div className="h-5 w-20 bg-gray-200 rounded-full" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-5 w-36 bg-gray-200 rounded" />
+                <div className="h-10 bg-gray-100 rounded" />
+              </div>
+              <div className="h-8 bg-gray-100 rounded-xl pt-2" />
+            </div>
+          ))
+        ) : filteredResources.length === 0 ? (
+          <div className="col-span-full bg-white rounded-3xl p-12 text-center border border-gray-200 space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-[#E8F0FA] flex items-center justify-center mx-auto text-[#1E4E8C]">
+              <FileText className="w-7 h-7 text-[#D4A017]" />
+            </div>
+            <div className="max-w-md mx-auto">
+              <h3 className="font-heading font-bold text-base text-[#14263F]">
+                No Resources Available in this Category
+              </h3>
+              <p className="text-xs text-[#6B7280] mt-1 leading-relaxed">
+                {isOwner
+                  ? 'Click "Upload Material" above to add worksheets, flashcards, or home practice guides.'
+                  : 'Worksheets, phonics cards, and learning materials uploaded by Mrs Sarah for this subject will appear here.'}
+              </p>
+            </div>
+            {isOwner && (
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#1E4E8C] text-white font-bold text-xs hover:bg-[#153763] transition-all"
+              >
+                <PlusCircle className="w-4 h-4 text-[#D4A017]" />
+                Upload New Material
+              </button>
+            )}
           </div>
         ) : (
           filteredResources.map((res) => (

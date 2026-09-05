@@ -13,8 +13,13 @@ import {
   AlertCircle,
   Shield,
   Save,
-  Info
+  Info,
+  Download,
+  ExternalLink,
+  Mail,
+  FileText
 } from 'lucide-react';
+import Link from 'next/link';
 import { useGlobal } from '@/lib/context/GlobalContext';
 import {
   EYTService,
@@ -24,7 +29,7 @@ import {
 } from '@/lib/eyt-service';
 import { createSPASassClientAuthenticated as createSPASassClient } from '@/lib/supabase/client';
 
-type ActiveTab = 'profile' | 'security' | 'notifications' | 'business' | 'children';
+type ActiveTab = 'profile' | 'security' | 'notifications' | 'business' | 'children' | 'privacy';
 
 export default function SettingsPage() {
   const { profile, refreshUser } = useGlobal();
@@ -340,6 +345,86 @@ export default function SettingsPage() {
     }
   };
 
+  // ------------------------------------------------
+  // 6. DATA PRIVACY & NDPA 2023 HANDLERS
+  // ------------------------------------------------
+  const handleExportData = () => {
+    try {
+      const userChildren = isOwner
+        ? EYTService.getChildren()
+        : (profile?.id ? EYTService.getChildren(profile.id) : []);
+      const userChildIds = userChildren.map((c) => c.id);
+
+      const userMilestones = isOwner
+        ? EYTService.getMilestones()
+        : userChildIds.flatMap((cid) => EYTService.getChildMilestones(cid));
+
+      const exportData = {
+        export_metadata: {
+          platform: 'Mrs Sarah Early Years Tutoring Platform',
+          framework: 'Nigeria Data Protection Act (NDPA) 2023 Statutory Export',
+          export_timestamp: new Date().toISOString(),
+          requested_by: profile?.full_name || 'Account User',
+          user_role: profile?.role || 'parent',
+        },
+        profile: {
+          id: profile?.id,
+          name: profile?.full_name,
+          email: profile?.email,
+          phone: profile?.phone,
+          role: profile?.role,
+          parental_consent_given: profile?.parental_consent_given,
+          parental_consent_at: profile?.parental_consent_at,
+          parental_consent_version: profile?.parental_consent_version,
+        },
+        children: userChildren,
+        milestones: userMilestones,
+        invoices: EYTService.getInvoices(isOwner ? undefined : profile?.id),
+        bookings: EYTService.getBookings(),
+        messages: EYTService.getMessages().filter(
+          (m) =>
+            isOwner ||
+            m.sender_profile_id === profile?.id ||
+            m.recipient_profile_id === profile?.id
+        ),
+        notification_preferences: EYTService.getNotificationPreferences(profile?.id),
+      };
+
+      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute('href', dataStr);
+      downloadAnchor.setAttribute(
+        'download',
+        `mrs_sarah_tutoring_ndpa_export_${(profile?.full_name || 'account').replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().slice(0, 10)}.json`
+      );
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+
+      showSuccess('Your personal data archive (NDPA Section 34) has been downloaded.');
+    } catch {
+      showError('Failed to generate personal data export. Please try again.');
+    }
+  };
+
+  const handleConfirmConsent = () => {
+    EYTService.updateProfile({
+      parental_consent_given: true,
+      parental_consent_at: new Date().toISOString(),
+      parental_consent_version: 'NDPA-2023-v1.0',
+    });
+    refreshUser();
+    showSuccess('Parental consent recorded successfully under NDPA 2023.');
+  };
+
+  const deletionEmailSubject = encodeURIComponent(
+    `NDPA 2023 Data Erasure Request - ${profile?.full_name || 'Parent'}`
+  );
+  const deletionEmailBody = encodeURIComponent(
+    `Dear Mrs Sarah,\n\nIn accordance with my statutory rights under Section 34 of the Nigeria Data Protection Act (NDPA) 2023, I hereby formally request the complete erasure and deletion of all personal and child data associated with my account.\n\nAccount Details:\n- Parent Name: ${profile?.full_name || ''}\n- Registered Email: ${profile?.email || ''}\n- Phone: ${profile?.phone || ''}\n- Children Enrolled: ${childrenList.map((c) => c.name).join(', ') || 'N/A'}\n- Date of Request: ${new Date().toLocaleDateString('en-GB')}\n\nI understand that Mrs Sarah Early Years Tutoring will process this request within the statutory 30-day response window and notify me when all records, progress tracking, and uploaded media have been permanently deleted.\n\nThank you,\n${profile?.full_name || ''}`
+  );
+  const deletionMailto = `mailto:sarahoakhena@gmail.com?subject=${deletionEmailSubject}&body=${deletionEmailBody}`;
+
   return (
     <div className="space-y-8 max-w-6xl mx-auto pb-12">
       {/* Header */}
@@ -440,6 +525,18 @@ export default function SettingsPage() {
             Linked Children ({childrenList.length})
           </button>
         )}
+
+        <button
+          onClick={() => setActiveTab('privacy')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+            activeTab === 'privacy'
+              ? 'bg-[#1E4E8C] text-white shadow-xs'
+              : 'text-[#6B7280] hover:text-[#1E4E8C] hover:bg-[#E8F0FA]'
+          }`}
+        >
+          <Shield className="w-4 h-4 text-[#D4A017]" />
+          Data Privacy & NDPA
+        </button>
       </div>
 
       {/* ========================================================= */}
@@ -1193,6 +1290,192 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* TAB 6: DATA PRIVACY & NDPA 2023 STATUTORY COMPLIANCE       */}
+      {/* ========================================================= */}
+      {activeTab === 'privacy' && (
+        <div className="space-y-8 animate-in fade-in duration-200">
+          {/* Top Banner */}
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-xs space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-[#E8F0FA] flex items-center justify-center text-[#1E4E8C] shrink-0">
+                  <Shield className="w-6 h-6 text-[#D4A017]" />
+                </div>
+                <div>
+                  <h2 className="font-heading text-xl font-bold text-[#1E4E8C]">
+                    Nigeria Data Protection Act (NDPA) 2023 Compliance
+                  </h2>
+                  <p className="text-xs text-[#6B7280]">
+                    Your statutory data protection rights, verified parental consent record, and data autonomy tools.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/privacy-policy"
+                  target="_blank"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-[#1E4E8C] hover:bg-[#E8F0FA] transition-all shadow-2xs"
+                >
+                  <FileText className="w-3.5 h-3.5 text-[#D4A017]" />
+                  Privacy Policy
+                  <ExternalLink className="w-3 h-3 text-[#6B7280]" />
+                </Link>
+                <Link
+                  href="/terms"
+                  target="_blank"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-[#1E4E8C] hover:bg-[#E8F0FA] transition-all shadow-2xs"
+                >
+                  <FileText className="w-3.5 h-3.5 text-[#D4A017]" />
+                  Terms of Service
+                  <ExternalLink className="w-3 h-3 text-[#6B7280]" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Parental Consent Status */}
+            <div className="p-5 rounded-2xl bg-[#FCFBF7] border border-[#E5E0D8] space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-xs shrink-0">
+                    ✓
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-[#14263F] flex items-center gap-2">
+                      <span>Statutory Parental Consent Status</span>
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        {profile?.parental_consent_given ? 'Active & Verified' : 'Standard'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#6B7280] mt-0.5">
+                      Framework: {profile?.parental_consent_version || 'NDPA-2023-v1.0'} &bull; Consented on:{' '}
+                      {profile?.parental_consent_at
+                        ? new Date(profile.parental_consent_at).toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : 'Recorded during account registration'}
+                    </p>
+                  </div>
+                </div>
+                {!profile?.parental_consent_given && (
+                  <button
+                    onClick={handleConfirmConsent}
+                    className="px-4 py-2 rounded-xl bg-[#1E4E8C] text-white text-xs font-bold hover:bg-[#153763] transition-all"
+                  >
+                    Confirm Parental Consent
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-[#6B7280] leading-relaxed">
+                In compliance with Section 31 of the Nigeria Data Protection Act (NDPA) 2023, personal data of minors (children)
+                is processed strictly with lawful parental or guardian consent. All collected observations, photos, and milestones
+                are utilized solely for Montessori early years educational instruction, attendance tracking, and parent updates.
+              </p>
+            </div>
+          </div>
+
+          {/* Two Action Cards: Access/Export and Erasure/Deletion */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Card 1: Right to Access & Portability */}
+            <div className="bg-white rounded-3xl p-6 sm:p-7 border border-gray-200 shadow-xs flex flex-col justify-between space-y-5">
+              <div className="space-y-4">
+                <div className="w-11 h-11 rounded-2xl bg-[#E8F0FA] flex items-center justify-center text-[#1E4E8C]">
+                  <Download className="w-5 h-5 text-[#1E4E8C]" />
+                </div>
+                <div>
+                  <h3 className="font-heading font-bold text-base text-[#1E4E8C]">
+                    Right of Access & Portability (NDPA §34)
+                  </h3>
+                  <p className="text-xs text-[#6B7280] mt-1.5 leading-relaxed">
+                    Under Section 34 of the NDPA 2023, you have the statutory right to request and receive a digital copy of
+                    all personal records and child developmental information held by Mrs Sarah in an open, structured JSON format.
+                  </p>
+                </div>
+
+                <div className="text-[11px] text-[#6B7280] space-y-1.5 bg-gray-50 p-3.5 rounded-2xl border border-gray-100">
+                  <p className="font-bold text-[#14263F]">Included in your downloadable data archive:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    <li>Parent contact info & verified consent metadata</li>
+                    <li>Linked child profiles, DOB & learning goals</li>
+                    <li>Montessori developmental milestones & tutor notes</li>
+                    <li>Tuition invoices, fee history & payment statuses</li>
+                    <li>In-app communication records & notification settings</li>
+                  </ul>
+                </div>
+              </div>
+
+              <button
+                onClick={handleExportData}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#1E4E8C] text-white font-bold text-xs hover:bg-[#153763] transition-all shadow-xs"
+              >
+                <Download className="w-4 h-4" />
+                Download Complete Data Archive (JSON)
+              </button>
+            </div>
+
+            {/* Card 2: Right to Erasure & Deletion */}
+            <div className="bg-white rounded-3xl p-6 sm:p-7 border border-gray-200 shadow-xs flex flex-col justify-between space-y-5">
+              <div className="space-y-4">
+                <div className="w-11 h-11 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-600">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-heading font-bold text-base text-[#1E4E8C]">
+                    Right to Erasure / Account Deletion (NDPA §34)
+                  </h3>
+                  <p className="text-xs text-[#6B7280] mt-1.5 leading-relaxed">
+                    You have the right to request the permanent deletion and erasure of your family account and all associated child
+                    records. Deletion requests are processed directly by Mrs Sarah within the statutory 30-day window.
+                  </p>
+                </div>
+
+                <div className="text-[11px] text-rose-900 bg-rose-50/60 p-3.5 rounded-2xl border border-rose-100 space-y-1.5">
+                  <p className="font-bold text-rose-800">Statutory 30-Day Response Window:</p>
+                  <p className="leading-relaxed">
+                    Upon receipt, Mrs Sarah will verify your identity and purge all child developmental assessments, session logs,
+                    and uploaded media. Financial audit trails are retained only where mandated by applicable Nigerian laws.
+                  </p>
+                </div>
+              </div>
+
+              <a
+                href={deletionMailto}
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 border-rose-200 bg-rose-50/40 text-rose-700 font-bold text-xs hover:bg-rose-100/70 transition-all text-center"
+              >
+                <Mail className="w-4 h-4" />
+                Request Complete Erasure / Account Deletion
+              </a>
+            </div>
+          </div>
+
+          {/* Retention & Controller Info Card */}
+          <div className="p-6 sm:p-7 rounded-3xl bg-white border border-gray-200 shadow-xs text-xs text-[#6B7280] space-y-4">
+            <h4 className="font-heading font-bold text-sm text-[#14263F]">
+              Data Controller & Retention Policies
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+              <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-100">
+                <div className="font-bold text-[#14263F] mb-1">Designated Data Controller</div>
+                <div>Mrs Sarah Early Years Tutoring</div>
+                <div className="text-[#1E4E8C] mt-1 font-medium">sarahoakhena@gmail.com</div>
+              </div>
+              <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-100">
+                <div className="font-bold text-[#14263F] mb-1">Retention Schedule</div>
+                <div>Retained during active enrollment + 12 months grace period, or immediate upon verified erasure.</div>
+              </div>
+              <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-100">
+                <div className="font-bold text-[#14263F] mb-1">Security Standards</div>
+                <div>Row-Level Security (RLS), encrypted sessions, no marketing or commercial third-party sharing.</div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -78,34 +78,52 @@ export default function EnquiriesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {enquiries.map((enq) => (
-                <tr key={enq.id} className="hover:bg-gray-50/80 transition-colors">
-                  <td className="p-4 font-bold text-[#1E4E8C]">{enq.name}</td>
-                  <td className="p-4 font-medium">{enq.contact}</td>
-                  <td className="p-4 text-[#6B7280]">{enq.child_age || '—'}</td>
-                  <td className="p-4 uppercase text-[10px] font-bold text-[#D4A017]">{enq.preferred_mode || 'online'}</td>
-                  <td className="p-4 max-w-xs text-gray-700 leading-relaxed">{enq.message}</td>
-                  <td className="p-4">
-                    <span
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
-                        enq.status === 'new'
-                          ? 'bg-rose-100 text-rose-800'
-                          : 'bg-emerald-100 text-emerald-800'
-                      }`}
-                    >
-                      {enq.status}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <button
-                      onClick={() => handleToggleStatus(enq.id, enq.status)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#E8F0FA] text-[#1E4E8C] hover:bg-[#d8e6f7] transition-colors"
-                    >
-                      {enq.status === 'new' ? 'Mark Contacted' : 'Mark New'}
-                    </button>
+              {enquiries.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="p-12 text-center text-[#6B7280]">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="w-12 h-12 rounded-2xl bg-[#E8F0FA] flex items-center justify-center text-[#1E4E8C]">
+                        <Mail className="w-6 h-6 text-[#D4A017]" />
+                      </div>
+                      <div className="font-heading font-bold text-base text-[#14263F]">
+                        No Enquiries Received Yet
+                      </div>
+                      <p className="text-xs text-[#6B7280] max-w-sm">
+                        New consultation requests and tutoring enquiries submitted from the public homepage contact form will appear here.
+                      </p>
+                    </div>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                enquiries.map((enq) => (
+                  <tr key={enq.id} className="hover:bg-gray-50/80 transition-colors">
+                    <td className="p-4 font-bold text-[#1E4E8C]">{enq.name}</td>
+                    <td className="p-4 font-medium">{enq.contact}</td>
+                    <td className="p-4 text-[#6B7280]">{enq.child_age || '—'}</td>
+                    <td className="p-4 uppercase text-[10px] font-bold text-[#D4A017]">{enq.preferred_mode || 'online'}</td>
+                    <td className="p-4 max-w-xs text-gray-700 leading-relaxed">{enq.message}</td>
+                    <td className="p-4">
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
+                          enq.status === 'new'
+                            ? 'bg-rose-100 text-rose-800'
+                            : 'bg-emerald-100 text-emerald-800'
+                        }`}
+                      >
+                        {enq.status}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <button
+                        onClick={() => handleToggleStatus(enq.id, enq.status)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#E8F0FA] text-[#1E4E8C] hover:bg-[#d8e6f7] transition-colors"
+                      >
+                        {enq.status === 'new' ? 'Mark Contacted' : 'Mark New'}
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
