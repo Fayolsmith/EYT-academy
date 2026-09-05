@@ -147,12 +147,14 @@ export function GlobalProvider({ children }: { children: React.ReactNode }) {
         if (EYTService.isSupabaseConfigured()) {
             const client = createSPAClient();
             const { data: { subscription } } = client.auth.onAuthStateChange((event, session) => {
-                if (event === 'SIGNED_OUT' || !session) {
-                    EYTService.logout();
-                    setUser(null);
-                    setRealProfile(null);
-                    setIsParentPreview(false);
-                } else if (session) {
+                if (event === 'SIGNED_OUT') {
+                    if (!EYTService.isAuthenticated()) {
+                        EYTService.logout();
+                        setUser(null);
+                        setRealProfile(null);
+                        setIsParentPreview(false);
+                    }
+                } else if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
                     loadData();
                 }
             });

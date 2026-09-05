@@ -72,7 +72,7 @@ export default function Navbar() {
       const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
         if (session?.user) {
           checkAuth();
-        } else {
+        } else if (!EYTService.isAuthenticated()) {
           setIsAuthenticated(false);
           setAuthProfile(null);
         }

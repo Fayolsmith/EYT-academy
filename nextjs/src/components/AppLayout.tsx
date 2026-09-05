@@ -26,6 +26,7 @@ import {
     Globe
 } from 'lucide-react';
 import { useGlobal } from '@/lib/context/GlobalContext';
+import { EYTService } from '@/lib/eyt-service';
 import { PageTransition } from '@/components/motion';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -61,7 +62,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }, []);
 
     useEffect(() => {
-        if (!loading && !profile && !user) {
+        if (!loading && !profile && !user && !EYTService.isAuthenticated()) {
             router.replace('/login');
         }
     }, [loading, profile, user, router]);
