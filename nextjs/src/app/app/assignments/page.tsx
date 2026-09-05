@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   BookOpen,
   PlusCircle,
@@ -13,7 +15,8 @@ import {
   Sparkles,
   ArrowRight,
   Upload,
-  AlertCircle
+  AlertCircle,
+  Lock,
 } from 'lucide-react';
 import { useGlobal } from '@/lib/context/GlobalContext';
 import {
@@ -29,6 +32,7 @@ type OwnerTab = 'queue' | 'all' | 'reviewed';
 type ParentTab = 'assigned' | 'submitted' | 'reviewed';
 
 export default function AssignmentsPage() {
+  const router = useRouter();
   const { profile } = useGlobal();
   const isOwner = profile?.role === 'owner';
 
@@ -114,10 +118,13 @@ export default function AssignmentsPage() {
   }, []);
 
   const handleOpenCreateForChild = useCallback((childId?: string) => {
-    const targetId = childId || (children.length > 0 ? children[0].id : '');
-    updateChildForAssignment(targetId);
+    if (!childId) {
+      router.push('/app/children');
+      return;
+    }
+    updateChildForAssignment(childId);
     setIsCreateModalOpen(true);
-  }, [children, updateChildForAssignment]);
+  }, [router, updateChildForAssignment]);
 
   const loadData = useCallback(() => {
     try {
@@ -154,6 +161,7 @@ export default function AssignmentsPage() {
         if (action === 'create' && isOwner) {
           updateChildForAssignment(urlChildId);
           setIsCreateModalOpen(true);
+          window.history.replaceState({}, '', `/app/assignments?childId=${urlChildId}`);
         }
       }
     }
@@ -351,13 +359,24 @@ export default function AssignmentsPage() {
 
           {/* Owner Create Assignment Button */}
           {isOwner && (
-            <button
-              onClick={() => handleOpenCreateForChild()}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1E4E8C] text-white font-bold text-xs hover:bg-[#153763] transition-all shadow-xs"
-            >
-              <PlusCircle className="w-4 h-4 text-[#D4A017]" />
-              <span>Assign Homework</span>
-            </button>
+            selectedChildFilter !== 'all' ? (
+              <button
+                onClick={() => handleOpenCreateForChild(selectedChildFilter)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1E4E8C] text-white font-bold text-xs hover:bg-[#153763] transition-all shadow-xs cursor-pointer"
+                title={`Assign homework to ${children.find((c) => c.id === selectedChildFilter)?.name || 'Student'}`}
+              >
+                <PlusCircle className="w-4 h-4 text-[#D4A017]" />
+                <span>Assign Homework to {children.find((c) => c.id === selectedChildFilter)?.name || 'Student'}</span>
+              </button>
+            ) : (
+              <Link
+                href="/app/children"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1E4E8C] text-white font-bold text-xs hover:bg-[#153763] transition-all shadow-xs"
+              >
+                <PlusCircle className="w-4 h-4 text-[#D4A017]" />
+                <span>Assign Homework (Select Student in Directory)</span>
+              </Link>
+            )
           )}
         </div>
       </div>
@@ -618,8 +637,17 @@ export default function AssignmentsPage() {
                     No Active Assigned Homework
                   </h3>
                   <p className="text-xs text-[#6B7280]">
-                    Click &ldquo;Assign Homework&rdquo; above or from any student&apos;s card in Student Directory.
+                    To assign homework, open any student&apos;s card in the Student Directory and click &ldquo;Assign Homework&rdquo;.
                   </p>
+                  <div className="pt-2">
+                    <Link
+                      href="/app/children"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#E8F0FA] text-[#1E4E8C] font-bold text-xs hover:bg-[#d8e6f7] transition-all border border-[#1E4E8C]/20 shadow-2xs"
+                    >
+                      <BookOpen className="w-3.5 h-3.5 text-[#D4A017]" />
+                      <span>Select Student in Directory →</span>
+                    </Link>
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1046,45 +1074,61 @@ export default function AssignmentsPage() {
             </div>
 
             <form onSubmit={handleCreateAssignmentSubmit} className="space-y-4 text-xs">
-              {/* Single Child Selection / Confirmation */}
+              {/* Locked Student Banner (Read-only static text - strictly 1:1) */}
               <div>
-                <label className="block font-bold text-[#14263F] uppercase tracking-wider mb-1.5">
-                  Student *
-                </label>
-                <select
-                  required
-                  value={createChildId}
-                  onChange={(e) => updateChildForAssignment(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#14263F] focus:ring-2 focus:ring-[#1E4E8C] outline-none"
-                >
-                  <option value="" disabled>-- Select single student --</option>
-                  {children.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} (Age {c.age_years || '—'}) {c.parent_name ? `• Parent: ${c.parent_name}` : ''}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block font-bold text-[#14263F] uppercase tracking-wider">
+                    Student (1:1 Individual Assignment)
+                  </label>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#1E4E8C] bg-[#E8F0FA] px-2.5 py-0.5 rounded-full border border-[#1E4E8C]/20">
+                    <Lock className="w-3 h-3 text-[#D4A017]" />
+                    Locked to Student
+                  </span>
+                </div>
 
-                {selectedChild && (
-                  <div className="mt-2 p-3 bg-[#E8F0FA]/70 rounded-xl border border-[#1E4E8C]/20 flex items-center gap-3">
+                {selectedChild ? (
+                  <div className="p-4 bg-[#F8FAFC] rounded-2xl border border-gray-200 flex items-center gap-3.5">
                     {selectedChild.avatar_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={selectedChild.avatar_url}
                         alt={selectedChild.name}
-                        className="w-9 h-9 rounded-xl object-cover border border-[#D4A017] shrink-0"
+                        className="w-11 h-11 rounded-xl object-cover border-2 border-[#D4A017] shrink-0"
                       />
                     ) : (
-                      <div className="w-9 h-9 rounded-xl bg-[#1E4E8C] text-[#D4A017] font-heading font-bold text-sm flex items-center justify-center shrink-0">
+                      <div className="w-11 h-11 rounded-xl bg-[#1E4E8C] text-[#D4A017] font-heading font-bold text-base flex items-center justify-center shrink-0 shadow-2xs">
                         {selectedChild.name.charAt(0)}
                       </div>
                     )}
-                    <div className="text-[11px] leading-tight">
-                      <span className="font-bold text-[#14263F] block">{selectedChild.name}</span>
-                      <span className="text-[#6B7280]">
-                        Parent: {selectedChild.parent_name || 'Recorded'} • {selectedChild.parent_email || 'Portal account'}
-                      </span>
+                    <div className="text-xs min-w-0 flex-1">
+                      <p className="text-[#14263F] leading-snug">
+                        Assigning homework to: <strong className="font-bold text-[#1E4E8C]">{selectedChild.name}</strong>
+                        {selectedChild.age_years ? ` (Age ${selectedChild.age_years})` : ''}
+                        {selectedChild.parent_name ? ` · Parent: ${selectedChild.parent_name}` : ''}
+                      </p>
+                      <p className="text-[11px] text-[#6B7280] mt-1">
+                        {selectedChild.parent_email ? `Contact: ${selectedChild.parent_email} • ` : ''}
+                        To assign homework to a different child, close this modal and click &ldquo;Assign Homework&rdquo; on that child&apos;s card in the Student Directory.
+                      </p>
                     </div>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 text-amber-900 text-xs space-y-2">
+                    <div className="flex items-center gap-2 font-bold">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>No Student Selected</span>
+                    </div>
+                    <p>
+                      In Mrs Sarah&apos;s 1:1 tutoring model, assignments must be created directly from a specific child&apos;s card.
+                    </p>
+                    <Link
+                      href="/app/children"
+                      onClick={() => setIsCreateModalOpen(false)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#1E4E8C] text-white font-bold rounded-xl text-xs hover:bg-[#153763] transition-colors"
+                    >
+                      <BookOpen className="w-3.5 h-3.5 text-[#D4A017]" />
+                      <span>Select Student in Student Directory →</span>
+                    </Link>
                   </div>
                 )}
               </div>
@@ -1199,7 +1243,8 @@ export default function AssignmentsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-[#1E4E8C] text-white font-bold text-xs hover:bg-[#153763] transition-all shadow-xs cursor-pointer"
+                  disabled={!selectedChild}
+                  className="px-5 py-2.5 rounded-xl bg-[#1E4E8C] disabled:bg-gray-300 text-white font-bold text-xs hover:bg-[#153763] disabled:cursor-not-allowed transition-all shadow-xs cursor-pointer"
                 >
                   Assign Homework to {selectedChild?.name || 'Student'}
                 </button>
