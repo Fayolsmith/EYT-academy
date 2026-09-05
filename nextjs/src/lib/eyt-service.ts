@@ -192,6 +192,7 @@ export interface Assignment {
   child_id: string;
   title: string;
   description: string;
+  materials_needed?: string | null;
   milestone_id: string | null;
   resource_id: string | null;
   due_date: string | null;
@@ -637,6 +638,7 @@ const DEFAULT_ASSIGNMENTS: Assignment[] = [
     child_id: 'child-1',
     title: 'Montessori Scissor Cutting Strips Practice',
     description: 'Please encourage Leo to practice cutting along the solid straight and zigzag lines on the printed strips. Emphasize thumb-up grip on safety scissors to develop hand strength for writing.',
+    materials_needed: 'Child safety scissors, printed cutting strips, small waste basket',
     milestone_id: 'm-prac-1',
     resource_id: 'res-1',
     due_date: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
@@ -657,6 +659,7 @@ const DEFAULT_ASSIGNMENTS: Assignment[] = [
     child_id: 'child-1',
     title: 'CVC Sandpaper Tracing & Phonics Sound Hunt',
     description: 'Find 3 objects around the home that start with the /s/ sound and trace the letter "s" on the tactile card with index and middle fingers.',
+    materials_needed: 'Montessori sandpaper letter cards (or rough paper card), 3 small household objects',
     milestone_id: 'm-lit-1',
     resource_id: 'res-2',
     due_date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0],
@@ -677,6 +680,7 @@ const DEFAULT_ASSIGNMENTS: Assignment[] = [
     child_id: 'child-1',
     title: 'Ten-Frame Counting Bears & Egg Carton Match',
     description: 'Count 10 counters into the egg carton grid, counting one-by-one with pointing.',
+    materials_needed: 'Empty 10-egg carton, 10 counting buttons or dried beans',
     milestone_id: 'm-num-2',
     resource_id: null,
     due_date: new Date(Date.now() - 86400000 * 2).toISOString().split('T')[0],
@@ -695,6 +699,7 @@ const DEFAULT_ASSIGNMENTS: Assignment[] = [
     child_id: 'child-2',
     title: 'Sound Shakers & Auditory Discrimination',
     description: 'Pair two matching sound canisters (rice vs dry beans) by listening carefully to the shakes.',
+    materials_needed: '2 opaque spice bottles or small tubs, dry rice, dried beans',
     milestone_id: 'm-lit-1',
     resource_id: null,
     due_date: new Date(Date.now() + 86400000 * 4).toISOString().split('T')[0],
@@ -1998,6 +2003,7 @@ export const EYTService = {
     childId: string;
     title: string;
     description: string;
+    materialsNeeded?: string | null;
     milestoneId?: string | null;
     resourceId?: string | null;
     dueDate: string;
@@ -2036,6 +2042,7 @@ export const EYTService = {
       child_id: data.childId,
       title: data.title.trim(),
       description: data.description.trim(),
+      materials_needed: data.materialsNeeded?.trim() || null,
       milestone_id: data.milestoneId || null,
       resource_id: data.resourceId || null,
       due_date: data.dueDate.trim(),
@@ -2062,7 +2069,7 @@ export const EYTService = {
         event_type: 'assignment_created',
         assignment_id: newAssignment.id,
         title: `New Montessori Home Activity: ${newAssignment.title}`,
-        message: `Mrs Sarah has assigned a new home activity for ${child.name}: "${newAssignment.title}". Due date: ${new Date(data.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}. Log in to your parent portal to view guidelines and submit progress.`,
+        message: `Mrs Sarah has assigned a new home activity for ${child.name}: "${newAssignment.title}". ${newAssignment.materials_needed ? `Materials needed: ${newAssignment.materials_needed}. ` : ''}Due date: ${new Date(data.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}. Log in to your parent portal to view guidelines and submit progress.`,
       });
     }
 

@@ -17,6 +17,7 @@ import {
   Upload,
   AlertCircle,
   Lock,
+  Package,
 } from 'lucide-react';
 import { useGlobal } from '@/lib/context/GlobalContext';
 import {
@@ -65,6 +66,7 @@ export default function AssignmentsPage() {
   const [createChildId, setCreateChildId] = useState<string>('');
   const [createTitle, setCreateTitle] = useState('');
   const [createDescription, setCreateDescription] = useState('');
+  const [createMaterialsNeeded, setCreateMaterialsNeeded] = useState('');
   const [createMilestoneId, setCreateMilestoneId] = useState<string>('');
   const [createResourceId, setCreateResourceId] = useState<string>('');
   const [createDueDate, setCreateDueDate] = useState<string>('');
@@ -215,6 +217,7 @@ export default function AssignmentsPage() {
         childId: createChildId,
         title: createTitle,
         description: createDescription,
+        materialsNeeded: createMaterialsNeeded.trim() || null,
         milestoneId: createMilestoneId || null,
         resourceId: createResourceId || null,
         dueDate: createDueDate.trim(),
@@ -226,6 +229,7 @@ export default function AssignmentsPage() {
       setIsCreateModalOpen(false);
       setCreateTitle('');
       setCreateDescription('');
+      setCreateMaterialsNeeded('');
       setCreateMilestoneId('');
       setCreateResourceId('');
       setCreateDueDate('');
@@ -675,6 +679,13 @@ export default function AssignmentsPage() {
                           {a.description}
                         </p>
 
+                        {a.materials_needed && (
+                          <div className="text-[11px] text-[#14263F] flex items-center gap-1.5 bg-amber-50/60 p-2 rounded-xl border border-amber-200/60">
+                            <Package className="w-3.5 h-3.5 text-[#D4A017] shrink-0" />
+                            <span className="truncate"><strong>Materials:</strong> {a.materials_needed}</span>
+                          </div>
+                        )}
+
                         {a.milestone_name && (
                           <div className="text-[11px] font-semibold text-[#1E4E8C] flex items-center gap-1.5">
                             <Award className="w-3.5 h-3.5 text-[#D4A017] shrink-0" />
@@ -744,6 +755,12 @@ export default function AssignmentsPage() {
                           <p className="text-xs text-[#6B7280] mt-1">
                             {a.description}
                           </p>
+                          {a.materials_needed && (
+                            <p className="text-[11px] text-[#14263F] mt-1.5 flex items-center gap-1">
+                              <Package className="w-3 h-3 text-[#D4A017]" />
+                              <span><strong>Materials:</strong> {a.materials_needed}</span>
+                            </p>
+                          )}
                         </div>
 
                         {/* Milestone Achieved Banner */}
@@ -875,6 +892,21 @@ export default function AssignmentsPage() {
                                     <p className="text-xs text-[#6B7280] leading-relaxed">
                                       {a.description}
                                     </p>
+
+                                    {/* Materials Needed */}
+                                    {a.materials_needed && (
+                                      <div className="p-3 bg-amber-50/70 rounded-xl border border-amber-200/80 flex items-start gap-2 text-xs">
+                                        <Package className="w-4 h-4 text-[#D4A017] shrink-0 mt-0.5" />
+                                        <div className="leading-snug">
+                                          <span className="font-bold text-[#14263F] block text-[11px] uppercase tracking-wider">
+                                            Materials Needed:
+                                          </span>
+                                          <span className="text-[#14263F] font-medium">
+                                            {a.materials_needed}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    )}
 
                                     {/* Linked Milestone */}
                                     {a.milestone_name && (
@@ -1148,18 +1180,42 @@ export default function AssignmentsPage() {
                 />
               </div>
 
-              {/* Description / Instructions */}
+              {/* Homework / Practice Activity */}
               <div>
-                <label className="block font-bold text-[#14263F] uppercase tracking-wider mb-1">
-                  Home Practice Guide & Instructions *
-                </label>
+                <div className="mb-1">
+                  <label className="block font-bold text-[#14263F] uppercase tracking-wider">
+                    Homework / Practice Activity *
+                  </label>
+                  <p className="text-[11px] text-[#6B7280] mt-0.5">
+                    Describe the activity itself, step by step — this is what the parent and child will do together at home.
+                  </p>
+                </div>
                 <textarea
                   required
                   rows={3}
                   value={createDescription}
                   onChange={(e) => setCreateDescription(e.target.value)}
-                  placeholder="Provide clear step-by-step guidance for parent and learner at home..."
+                  placeholder="Describe the activity itself, step by step..."
                   className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-[#1E4E8C] outline-none resize-none"
+                />
+              </div>
+
+              {/* Materials Needed (Optional) */}
+              <div>
+                <div className="mb-1">
+                  <label className="block font-bold text-[#14263F] uppercase tracking-wider">
+                    Materials Needed (Optional)
+                  </label>
+                  <p className="text-[11px] text-[#6B7280] mt-0.5">
+                    List supplies to have ready before starting (e.g. scissors, the attached worksheet, a pencil).
+                  </p>
+                </div>
+                <input
+                  type="text"
+                  value={createMaterialsNeeded}
+                  onChange={(e) => setCreateMaterialsNeeded(e.target.value)}
+                  placeholder="e.g. scissors, the attached worksheet, a pencil"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold focus:ring-2 focus:ring-[#1E4E8C] outline-none"
                 />
               </div>
 
@@ -1279,11 +1335,19 @@ export default function AssignmentsPage() {
 
             <form onSubmit={handleParentSubmit} className="space-y-4 text-xs">
               {/* Instructions Reminder */}
-              <div className="p-3.5 bg-[#FCFBF7] rounded-2xl border border-[#F3E7C4] text-[#14263F] space-y-1">
-                <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider block">
-                  Mrs Sarah&apos;s Instructions:
-                </span>
-                <p className="text-xs leading-relaxed">{submittingAssignment.description}</p>
+              <div className="p-3.5 bg-[#FCFBF7] rounded-2xl border border-[#F3E7C4] text-[#14263F] space-y-2">
+                <div>
+                  <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider block">
+                    Homework / Practice Activity:
+                  </span>
+                  <p className="text-xs leading-relaxed">{submittingAssignment.description}</p>
+                </div>
+                {submittingAssignment.materials_needed && (
+                  <div className="pt-2 border-t border-[#F3E7C4]/80 flex items-start gap-1.5 text-xs text-[#14263F]">
+                    <Package className="w-3.5 h-3.5 text-[#D4A017] shrink-0 mt-0.5" />
+                    <span><strong>Materials Needed:</strong> {submittingAssignment.materials_needed}</span>
+                  </div>
+                )}
               </div>
 
               {/* Notes Field */}
@@ -1391,6 +1455,22 @@ export default function AssignmentsPage() {
             </div>
 
             <form onSubmit={handleReviewSubmit} className="space-y-4 text-xs">
+              {/* Activity & Materials Context */}
+              <div className="p-3.5 bg-[#FCFBF7] rounded-2xl border border-[#F3E7C4] text-[#14263F] space-y-1.5">
+                <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider block">
+                  Assigned Homework / Practice Activity:
+                </span>
+                <p className="text-xs text-[#14263F] leading-relaxed font-medium">
+                  {reviewingAssignment.assignment.description}
+                </p>
+                {reviewingAssignment.assignment.materials_needed && (
+                  <p className="text-[11px] text-[#6B7280] pt-1 border-t border-[#F3E7C4]/80 flex items-center gap-1.5">
+                    <Package className="w-3.5 h-3.5 text-[#D4A017] shrink-0" />
+                    <span><strong>Materials:</strong> {reviewingAssignment.assignment.materials_needed}</span>
+                  </p>
+                )}
+              </div>
+
               {/* Submission Details */}
               <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100 space-y-2.5">
                 <div className="flex items-center justify-between">

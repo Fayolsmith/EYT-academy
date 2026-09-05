@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS public.assignments (
     child_id UUID NOT NULL REFERENCES public.children(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     description TEXT NOT NULL,
+    materials_needed TEXT,
     milestone_id UUID REFERENCES public.milestones(id) ON DELETE SET NULL,
     resource_id UUID REFERENCES public.resources(id) ON DELETE SET NULL,
     due_date DATE,
