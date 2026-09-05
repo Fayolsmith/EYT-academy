@@ -88,8 +88,20 @@ export function GlobalProvider({ children }: { children: React.ReactNode }) {
             }
         } catch (error) {
             console.error('Error loading user data:', error);
-            setUser(null);
-            setRealProfile(null);
+            const localAuth = EYTService.getAuthenticatedUser();
+            if (localAuth) {
+                setUser({
+                    email: localAuth.email,
+                    id: localAuth.id,
+                    registered_at: new Date(),
+                    full_name: localAuth.full_name,
+                    role: localAuth.role,
+                });
+                setRealProfile(localAuth);
+            } else {
+                setUser(null);
+                setRealProfile(null);
+            }
         } finally {
             setLoading(false);
         }

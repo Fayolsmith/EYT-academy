@@ -28,7 +28,8 @@ export async function createSPASassClientAuthenticated() {
     try {
         const user = await client.auth.getSession();
         if (!user.data || !user.data.session) {
-            if (typeof window !== 'undefined') {
+            const hasLocalAuth = typeof document !== 'undefined' && document.cookie.includes('eyt_auth=true');
+            if (!hasLocalAuth && typeof window !== 'undefined') {
                 window.location.href = '/login';
             }
         }

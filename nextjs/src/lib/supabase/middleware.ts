@@ -6,6 +6,20 @@ export async function updateSession(request: NextRequest) {
         request,
     })
 
+    const isAppRoute = request.nextUrl.pathname.startsWith('/app');
+    const isAuthRoute = request.nextUrl.pathname.startsWith('/auth') || request.nextUrl.pathname === '/login';
+
+    // 1. Check EYT session auth cookie first (works for review build, demo accounts, and local sessions)
+    const eytAuth = request.cookies.get('eyt_auth')?.value;
+    if (eytAuth === 'true') {
+        if (isAuthRoute) {
+            const url = request.nextUrl.clone();
+            url.pathname = '/app';
+            return NextResponse.redirect(url);
+        }
+        return supabaseResponse;
+    }
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://hcxhxxihtjshyjaoxoqh.supabase.co';
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhjeGh4eGlodGpzaHlqYW94b3FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2MjA3ODEsImV4cCI6MjEwNDE5Njc4MX0.wAbrPNvT-DzMDOB3JSB5hHt_LnPIiilRVqadff4Zor4';
 
@@ -13,13 +27,9 @@ export async function updateSession(request: NextRequest) {
         !supabaseUrl ||
         !supabaseAnonKey ||
         supabaseUrl.includes('YOURSUPABASE') ||
-        supabaseUrl.includes('placeholder') ||
-        supabaseAnonKey === 'YYY' ||
-        supabaseAnonKey.includes('placeholder')
+        supabaseUrl.includes('placeholder')
     ) {
-        // In local/offline mode, check the session auth cookie
-        const eytAuth = request.cookies.get('eyt_auth')?.value;
-        if (eytAuth !== 'true' && request.nextUrl.pathname.startsWith('/app')) {
+        if (isAppRoute && eytAuth !== 'true') {
             const url = request.nextUrl.clone();
             url.pathname = '/login';
             return NextResponse.redirect(url);
@@ -49,17 +59,33 @@ export async function updateSession(request: NextRequest) {
             }
         )
 
-        const { data, error } = await supabase.auth.getUser()
-        if (
-            (error || !data?.user) && request.nextUrl.pathname.startsWith('/app')
-        ) {
+        const { data } = await supabase.auth.getUser()
+        if (data?.user) {
+            // Persist eyt_auth cookie for high-speed client/middleware parity
+            supabaseResponse.cookies.set('eyt_auth', 'true', {
+                path: '/',
+                maxAge: 604800,
+                sameSite: 'lax',
+            });
+
+            if (isAuthRoute) {
+                const url = request.nextUrl.clone()
+                url.pathname = '/app'
+                return NextResponse.redirect(url)
+            }
+            return supabaseResponse;
+        }
+
+        // Only redirect to login if accessing protected /app routes without authentication
+        if (isAppRoute) {
             const url = request.nextUrl.clone()
             url.pathname = '/login'
             return NextResponse.redirect(url)
         }
     } catch (err) {
         console.error('Supabase middleware error:', err)
-        if (request.nextUrl.pathname.startsWith('/app')) {
+        // If there's an error reaching Supabase and no eyt_auth cookie, protect /app
+        if (isAppRoute && eytAuth !== 'true') {
             const url = request.nextUrl.clone()
             url.pathname = '/login'
             return NextResponse.redirect(url)

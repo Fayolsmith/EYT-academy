@@ -126,16 +126,32 @@ export default function LoginPage() {
   };
 
   // Quick login helper for review build
-  const handleDevQuickLogin = (role: 'owner' | 'parent') => {
+  const handleDevQuickLogin = async (role: 'owner' | 'parent') => {
+    setLoading(true);
+    setError('');
+    const targetEmail = role === 'owner' ? 'sarahoakhena@gmail.com' : 'elizabeth@example.com';
+    const targetPassword = role === 'owner' ? 'SarahReview2026!' : 'ParentReview2026!';
+    setEmail(targetEmail);
+    setPassword(targetPassword);
+
+    try {
+      if (EYTService.isSupabaseConfigured()) {
+        const client = createSPAClient();
+        await client.auth.signInWithPassword({
+          email: targetEmail,
+          password: targetPassword,
+        });
+      }
+    } catch (e) {
+      console.warn('Supabase auth attempt completed with fallback:', e);
+    }
+
     if (role === 'owner') {
-      setEmail('sarahoakhena@gmail.com');
-      setPassword('SarahReview2026!');
       EYTService.loginAsOwner();
     } else {
-      setEmail('elizabeth@example.com');
-      setPassword('ParentReview2026!');
       EYTService.loginAsParent();
     }
+
     window.location.href = '/app';
   };
 

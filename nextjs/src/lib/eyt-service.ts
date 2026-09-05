@@ -909,12 +909,31 @@ export const EYTService = {
   // CURRENT USER / AUTH STATE
   // ------------------------------------------------
   isAuthenticated(): boolean {
-    return storage.get<boolean>('is_authenticated', false);
+    if (storage.get<boolean>('is_authenticated', false)) return true;
+    if (typeof document !== 'undefined') {
+      return document.cookie.split(';').some((c) => c.trim().startsWith('eyt_auth=true'));
+    }
+    return false;
   },
 
   getAuthenticatedUser(): UserProfile | null {
-    if (!this.isAuthenticated()) return null;
-    return storage.get<UserProfile | null>('current_user', null);
+    const userFromStorage = storage.get<UserProfile | null>('current_user', null);
+    if (userFromStorage) return userFromStorage;
+
+    // Fallback: reconstruct session from cookie
+    if (typeof document !== 'undefined') {
+      const cookies = document.cookie.split(';').map((c) => c.trim());
+      const hasAuth = cookies.some((c) => c === 'eyt_auth=true');
+      if (hasAuth) {
+        const roleCookie = cookies.find((c) => c.startsWith('eyt_role='));
+        const role = roleCookie ? roleCookie.split('=')[1] : null;
+        const profile = role === 'owner' ? DEFAULT_SARAH_PROFILE : DEFAULT_PARENT_PROFILE;
+        storage.set('current_user', profile);
+        storage.set('is_authenticated', true);
+        return profile;
+      }
+    }
+    return null;
   },
 
   getCurrentUser(): UserProfile {
@@ -941,7 +960,7 @@ export const EYTService = {
 
   saveRegisteredUser(user: UserProfile) {
     const users = storage.get<UserProfile[]>('registered_users', []);
-    const idx = users.findIndex((u) => u.email.toLowerCase() === user.email.toLowerCase());
+    const idx = users.findIndex((u) => u.id === user.id || u.email.toLowerCase() === user.email.toLowerCase());
     if (idx >= 0) {
       users[idx] = user;
     } else {
@@ -956,6 +975,7 @@ export const EYTService = {
     this.saveRegisteredUser(user);
     if (typeof document !== 'undefined') {
       document.cookie = 'eyt_auth=true; path=/; max-age=604800; SameSite=Lax';
+      document.cookie = `eyt_role=${user.role}; path=/; max-age=604800; SameSite=Lax`;
     }
   },
 
@@ -964,6 +984,7 @@ export const EYTService = {
     storage.set('is_authenticated', false);
     if (typeof document !== 'undefined') {
       document.cookie = 'eyt_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
+      document.cookie = 'eyt_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax';
     }
   },
 
