@@ -9,7 +9,6 @@ import {
   Calendar,
   Award,
   FileText,
-  Camera,
   ExternalLink,
   Sparkles,
   ArrowRight,
@@ -58,16 +57,14 @@ export default function AssignmentsPage() {
   const [submittingAssignment, setSubmittingAssignment] = useState<Assignment | null>(null);
   const [photoPreviewModalUrl, setPhotoPreviewModalUrl] = useState<string | null>(null);
 
-  // 1. Create Assignment Form State (Owner)
-  const [createChildIds, setCreateChildIds] = useState<string[]>([]);
+  // 1. Create Assignment Form State (Owner) - STRICTLY 1:1 single child
+  const [createChildId, setCreateChildId] = useState<string>('');
   const [createTitle, setCreateTitle] = useState('');
   const [createDescription, setCreateDescription] = useState('');
   const [createMilestoneId, setCreateMilestoneId] = useState<string>('');
   const [createResourceId, setCreateResourceId] = useState<string>('');
-  const [createDueDate, setCreateDueDate] = useState(() => {
-    const d = new Date(Date.now() + 86400000 * 4);
-    return d.toISOString().split('T')[0];
-  });
+  const [createDueDate, setCreateDueDate] = useState<string>('');
+  const [suggestedSessionLabel, setSuggestedSessionLabel] = useState<string | null>(null);
 
   // 2. Submit Assignment Form State (Parent)
   const [submissionNote, setSubmissionNote] = useState('');
@@ -89,25 +86,54 @@ export default function AssignmentsPage() {
     setTimeout(() => setErrorMessage(null), 6000);
   };
 
+  // Helper to update selected child for assignment and compute smart next session due date
+  const updateChildForAssignment = useCallback((childId: string) => {
+    setCreateChildId(childId);
+    if (!childId) {
+      setCreateDueDate('');
+      setSuggestedSessionLabel(null);
+      return;
+    }
+
+    // Smart default: Query next upcoming confirmed session for this specific child
+    const nextSession = EYTService.getNextConfirmedSession(childId);
+    if (nextSession) {
+      const sessionDate = new Date(nextSession.start_time).toISOString().split('T')[0];
+      const sessionFormatted = new Date(nextSession.start_time).toLocaleDateString('en-GB', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      });
+      setCreateDueDate(sessionDate);
+      setSuggestedSessionLabel(`Due by next session — ${sessionFormatted}`);
+    } else {
+      // Fallback: No upcoming session booked — plain required manual date entry with no default
+      setCreateDueDate('');
+      setSuggestedSessionLabel(null);
+    }
+  }, []);
+
+  const handleOpenCreateForChild = useCallback((childId?: string) => {
+    const targetId = childId || (children.length > 0 ? children[0].id : '');
+    updateChildForAssignment(targetId);
+    setIsCreateModalOpen(true);
+  }, [children, updateChildForAssignment]);
+
   const loadData = useCallback(() => {
     try {
-      const childList = EYTService.getChildren();
+      const childList = isOwner ? EYTService.getChildren() : EYTService.getChildren(profile?.id);
       setChildren(childList);
       setMilestones(EYTService.getMilestones());
       setResources(EYTService.getResources());
 
       const asgnList = EYTService.getAssignments();
       setAssignments(asgnList);
-
-      if (childList.length > 0 && createChildIds.length === 0) {
-        setCreateChildIds([childList[0].id]);
-      }
     } catch (err) {
       console.error('Failed to load assignments data:', err);
     } finally {
       setIsLoading(false);
     }
-  }, [createChildIds.length]);
+  }, [isOwner, profile?.id]);
 
   useEffect(() => {
     setIsLoading(true);
@@ -116,6 +142,22 @@ export default function AssignmentsPage() {
     }, 100);
     return () => clearTimeout(timer);
   }, [profile, loadData]);
+
+  // Read URL params on mount (e.g. ?childId=xxx&action=create)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && children.length > 0) {
+      const params = new URLSearchParams(window.location.search);
+      const urlChildId = params.get('childId');
+      const action = params.get('action');
+      if (urlChildId) {
+        setSelectedChildFilter(urlChildId);
+        if (action === 'create' && isOwner) {
+          updateChildForAssignment(urlChildId);
+          setIsCreateModalOpen(true);
+        }
+      }
+    }
+  }, [isOwner, children, updateChildForAssignment]);
 
   // Filtered assignments
   const filteredAssignments = assignments.filter((a) => {
@@ -145,51 +187,41 @@ export default function AssignmentsPage() {
   // ------------------------------------------------
   // HANDLERS
   // ------------------------------------------------
-  const handleToggleChildSelect = (childId: string) => {
-    setCreateChildIds((prev) =>
-      prev.includes(childId) ? prev.filter((id) => id !== childId) : [...prev, childId]
-    );
-  };
-
-  const handleSelectAllChildren = () => {
-    if (createChildIds.length === children.length) {
-      setCreateChildIds([]);
-    } else {
-      setCreateChildIds(children.map((c) => c.id));
-    }
-  };
-
   const handleCreateAssignmentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (createChildIds.length === 0) {
-      showError('Please select at least one child for this assignment.');
+    if (!createChildId) {
+      showError('Please select a student for this assignment.');
       return;
     }
     if (!createTitle.trim() || !createDescription.trim()) {
-      showError('Title and instructions are required.');
+      showError('Title and home practice instructions are required.');
+      return;
+    }
+    if (!createDueDate || !createDueDate.trim()) {
+      showError('Target due date is required. Homework must have a clear completion deadline.');
       return;
     }
 
     try {
       const created = EYTService.createAssignment({
-        childIds: createChildIds,
+        childId: createChildId,
         title: createTitle,
         description: createDescription,
         milestoneId: createMilestoneId || null,
         resourceId: createResourceId || null,
-        dueDate: createDueDate || null,
+        dueDate: createDueDate.trim(),
       });
 
       showSuccess(
-        `Successfully assigned "${createTitle}" to ${created.length} student${
-          created.length > 1 ? 's' : ''
-        }. Parent email notification sent.`
+        `Successfully assigned "${createTitle}" to ${created.child_name || 'student'}. Parent email notification sent.`
       );
       setIsCreateModalOpen(false);
       setCreateTitle('');
       setCreateDescription('');
       setCreateMilestoneId('');
       setCreateResourceId('');
+      setCreateDueDate('');
+      setSuggestedSessionLabel(null);
       loadData();
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to create assignment.');
@@ -276,6 +308,8 @@ export default function AssignmentsPage() {
     { label: 'Sound card tracing', url: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=800&q=80' },
   ];
 
+  const selectedChild = children.find((c) => c.id === createChildId);
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-12">
       {/* Header */}
@@ -290,7 +324,7 @@ export default function AssignmentsPage() {
           </h1>
           <p className="text-xs sm:text-sm text-[#6B7280] mt-1">
             {isOwner
-              ? 'Assign Montessori skill activities, inspect student evidence/notes, and certify curriculum progression.'
+              ? 'Assign 1:1 individualized Montessori activities, inspect student evidence/notes, and certify curriculum progression.'
               : 'Practice developmental milestones at home with your learner, upload photos/notes, and receive Mrs Sarah’s feedback.'}
           </p>
         </div>
@@ -299,7 +333,7 @@ export default function AssignmentsPage() {
           {/* Child Filter */}
           {children.length > 1 && (
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-[#14263F]">Student:</span>
+              <span className="text-xs font-bold text-[#14263F]">Filter Student:</span>
               <select
                 value={selectedChildFilter}
                 onChange={(e) => setSelectedChildFilter(e.target.value)}
@@ -318,11 +352,11 @@ export default function AssignmentsPage() {
           {/* Owner Create Assignment Button */}
           {isOwner && (
             <button
-              onClick={() => setIsCreateModalOpen(true)}
+              onClick={() => handleOpenCreateForChild()}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1E4E8C] text-white font-bold text-xs hover:bg-[#153763] transition-all shadow-xs"
             >
               <PlusCircle className="w-4 h-4 text-[#D4A017]" />
-              <span>Create New Assignment</span>
+              <span>Assign Homework</span>
             </button>
           )}
         </div>
@@ -483,7 +517,7 @@ export default function AssignmentsPage() {
                     Review Queue is Clear!
                   </h3>
                   <p className="text-xs text-[#6B7280] max-w-md mx-auto">
-                    There are no pending homework submissions from families awaiting review right now.
+                    There are no pending homework submissions awaiting review right now.
                   </p>
                 </div>
               ) : (
@@ -540,6 +574,7 @@ export default function AssignmentsPage() {
                                 onClick={() => setPhotoPreviewModalUrl(sub.submission_photo_url)}
                                 className="relative group cursor-pointer w-32 h-24 rounded-xl overflow-hidden border border-gray-200 shadow-2xs"
                               >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
                                   src={sub.submission_photo_url}
                                   alt="Homework evidence"
@@ -557,7 +592,7 @@ export default function AssignmentsPage() {
                         <div className="pt-2 flex justify-end">
                           <button
                             onClick={() => handleOpenReviewModal(assignment)}
-                            className="px-4 py-2.5 rounded-xl bg-[#1E4E8C] text-white font-bold text-xs hover:bg-[#153763] transition-all flex items-center gap-2 shadow-xs"
+                            className="px-4 py-2.5 rounded-xl bg-[#1E4E8C] text-white font-bold text-xs hover:bg-[#153763] transition-all flex items-center gap-2 shadow-xs cursor-pointer"
                           >
                             <span>Review & Leave Feedback</span>
                             <ArrowRight className="w-3.5 h-3.5 text-[#D4A017]" />
@@ -572,7 +607,7 @@ export default function AssignmentsPage() {
           )}
 
           {/* ========================================================= */}
-          {/* OWNER VIEW: ALL ASSIGNMENTS (ASSIGNED / ACTIVE)           */}
+          {/* OWNER VIEW: ALL ACTIVE ASSIGNMENTS                        */}
           {/* ========================================================= */}
           {isOwner && ownerTab === 'all' && (
             <div className="space-y-6">
@@ -583,7 +618,7 @@ export default function AssignmentsPage() {
                     No Active Assigned Homework
                   </h3>
                   <p className="text-xs text-[#6B7280]">
-                    Click &ldquo;Create New Assignment&rdquo; above to assign targeted home activities.
+                    Click &ldquo;Assign Homework&rdquo; above or from any student&apos;s card in Student Directory.
                   </p>
                 </div>
               ) : (
@@ -598,12 +633,10 @@ export default function AssignmentsPage() {
                           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#E8F0FA] text-[#1E4E8C]">
                             {a.child_name}
                           </span>
-                          {a.due_date && (
-                            <span className="text-[11px] text-[#6B7280] flex items-center gap-1 font-semibold">
-                              <Calendar className="w-3 h-3 text-[#D4A017]" />
-                              Due: {new Date(a.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                            </span>
-                          )}
+                          <span className="text-[11px] text-[#1E4E8C] flex items-center gap-1 font-bold bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
+                            <Calendar className="w-3 h-3 text-[#D4A017]" />
+                            Due: {new Date(a.due_date || '').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                          </span>
                         </div>
 
                         <h3 className="font-heading font-bold text-base text-[#14263F]">
@@ -643,9 +676,9 @@ export default function AssignmentsPage() {
           )}
 
           {/* ========================================================= */}
-          {/* OWNER & PARENT SHARED: REVIEWED HISTORY                   */}
+          {/* OWNER: REVIEWED ARCHIVE                                   */}
           {/* ========================================================= */}
-          {((isOwner && ownerTab === 'reviewed') || (!isOwner && parentTab === 'reviewed')) && (
+          {isOwner && ownerTab === 'reviewed' && (
             <div className="space-y-6">
               {reviewedList.length === 0 ? (
                 <div className="p-12 text-center bg-white rounded-3xl border border-gray-200 shadow-2xs space-y-3">
@@ -654,7 +687,7 @@ export default function AssignmentsPage() {
                     No Reviewed Assignments Yet
                   </h3>
                   <p className="text-xs text-[#6B7280]">
-                    Completed and approved homework with Mrs Sarah’s feedback will appear here.
+                    Completed and approved homework will appear here.
                   </p>
                 </div>
               ) : (
@@ -711,27 +744,6 @@ export default function AssignmentsPage() {
                             </p>
                           </div>
                         )}
-
-                        {/* Family Submission Note & Photo */}
-                        {sub?.submission_note && (
-                          <div className="text-xs text-[#6B7280] space-y-2 border-t border-gray-100 pt-3">
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-[#14263F]">Home Observation:</span>
-                              {sub.submission_photo_url && (
-                                <button
-                                  onClick={() => setPhotoPreviewModalUrl(sub.submission_photo_url)}
-                                  className="text-[11px] font-bold text-[#1E4E8C] hover:underline flex items-center gap-1"
-                                >
-                                  <Camera className="w-3 h-3 text-[#D4A017]" />
-                                  View Evidence Photo
-                                </button>
-                              )}
-                            </div>
-                            <p className="italic bg-gray-50 p-3 rounded-xl border border-gray-100 text-[11px]">
-                              &ldquo;{sub.submission_note}&rdquo;
-                            </p>
-                          </div>
-                        )}
                       </div>
                     );
                   })}
@@ -741,182 +753,269 @@ export default function AssignmentsPage() {
           )}
 
           {/* ========================================================= */}
-          {/* PARENT VIEW: TO DO / ASSIGNED                             */}
+          {/* PARENT PORTAL: GROUPED PER CHILD                          */}
           {/* ========================================================= */}
-          {!isOwner && parentTab === 'assigned' && (
-            <div className="space-y-6">
-              {assignedList.length === 0 ? (
+          {!isOwner && (
+            <div className="space-y-10">
+              {children.length === 0 ? (
                 <div className="p-12 text-center bg-white rounded-3xl border border-gray-200 shadow-2xs space-y-3">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center mx-auto text-emerald-600">
-                    <CheckCircle2 className="w-6 h-6" />
-                  </div>
-                  <h3 className="font-heading font-bold text-lg text-[#1E4E8C]">
-                    All Caught Up!
+                  <BookOpen className="w-8 h-8 text-gray-400 mx-auto" />
+                  <h3 className="font-heading font-bold text-base text-[#1E4E8C]">
+                    No Enrolled Learners Found
                   </h3>
-                  <p className="text-xs text-[#6B7280] max-w-md mx-auto">
-                    You have no outstanding home activities to complete right now. Check back after your next tutorial session with Mrs Sarah!
-                  </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {assignedList.map((a) => (
+                children.map((child) => {
+                  if (selectedChildFilter !== 'all' && selectedChildFilter !== child.id) {
+                    return null;
+                  }
+
+                  const childAssigned = assignedList.filter((a) => a.child_id === child.id);
+                  const childSubmitted = submittedList.filter((a) => a.child_id === child.id);
+                  const childReviewed = reviewedList.filter((a) => a.child_id === child.id);
+
+                  return (
                     <div
-                      key={a.id}
-                      className="bg-white rounded-3xl border border-gray-200 p-6 space-y-5 shadow-2xs flex flex-col justify-between hover:border-[#1E4E8C]/40 transition-colors"
+                      key={child.id}
+                      className="bg-white/90 rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-sm space-y-6"
                     >
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#E8F0FA] text-[#1E4E8C]">
-                            {a.child_name}
-                          </span>
-                          {a.due_date && (
-                            <span className="text-[11px] font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                              <Calendar className="w-3 h-3 text-[#D4A017]" />
-                              Due: {new Date(a.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                            </span>
+                      {/* Visual Child Section Header */}
+                      <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+                        <div className="flex items-center gap-3.5">
+                          {child.avatar_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={child.avatar_url}
+                              alt={child.name}
+                              className="w-12 h-12 rounded-2xl object-cover border border-[#D4A017] shadow-2xs shrink-0"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-2xl bg-[#1E4E8C] text-[#D4A017] font-heading font-bold text-xl flex items-center justify-center shadow-2xs shrink-0">
+                              {child.name.charAt(0)}
+                            </div>
+                          )}
+                          <div>
+                            <h2 className="font-heading text-xl font-bold text-[#14263F]">
+                              {child.name}&apos;s Homework & Activities
+                            </h2>
+                            <p className="text-xs text-[#6B7280]">
+                              Age {child.age_years || 'Early Years'} • Individualized 1:1 Montessori practice
+                            </p>
+                          </div>
+                        </div>
+
+                        <span className="hidden sm:inline-flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full bg-[#E8F0FA] text-[#1E4E8C]">
+                          <BookOpen className="w-3.5 h-3.5 text-[#D4A017]" />
+                          <span>{childAssigned.length} To Do</span>
+                        </span>
+                      </div>
+
+                      {/* Content by active Parent Tab */}
+                      {parentTab === 'assigned' && (
+                        <div>
+                          {childAssigned.length === 0 ? (
+                            <div className="p-8 text-center bg-gray-50/70 rounded-2xl border border-gray-200/80 space-y-2">
+                              <CheckCircle2 className="w-6 h-6 text-emerald-600 mx-auto" />
+                              <p className="text-xs font-semibold text-[#14263F]">
+                                All caught up! No pending activities for {child.name}.
+                              </p>
+                              <p className="text-[11px] text-[#6B7280]">
+                                Check back after your next scheduled session with Mrs Sarah.
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                              {childAssigned.map((a) => (
+                                <div
+                                  key={a.id}
+                                  className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4 shadow-2xs flex flex-col justify-between hover:border-[#1E4E8C]/40 transition-colors"
+                                >
+                                  <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">
+                                        Home Practice
+                                      </span>
+                                      <span className="text-[11px] font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-amber-100">
+                                        <Calendar className="w-3 h-3 text-[#D4A017]" />
+                                        Due: {new Date(a.due_date || '').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                                      </span>
+                                    </div>
+
+                                    <h3 className="font-heading font-bold text-base text-[#14263F]">
+                                      {a.title}
+                                    </h3>
+                                    <p className="text-xs text-[#6B7280] leading-relaxed">
+                                      {a.description}
+                                    </p>
+
+                                    {/* Linked Milestone */}
+                                    {a.milestone_name && (
+                                      <div className="p-3 bg-[#FCFBF7] rounded-xl border border-[#F3E7C4] flex items-center gap-2 text-xs">
+                                        <Award className="w-4 h-4 text-[#D4A017] shrink-0" />
+                                        <div>
+                                          <span className="text-[10px] font-bold text-[#6B7280] uppercase block">
+                                            Skill Aim:
+                                          </span>
+                                          <span className="font-bold text-[#14263F]">{a.milestone_name}</span>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Attached Resource */}
+                                    {a.resource_title && (
+                                      <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-100 flex items-center justify-between text-xs">
+                                        <div className="flex items-center gap-2 truncate pr-2">
+                                          <FileText className="w-4 h-4 text-[#1E4E8C] shrink-0" />
+                                          <span className="font-bold text-[#1E4E8C] truncate">
+                                            {a.resource_title}
+                                          </span>
+                                        </div>
+                                        {a.resource_url && (
+                                          <a
+                                            href={a.resource_url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-[11px] font-bold text-[#1E4E8C] hover:underline flex items-center gap-1 shrink-0"
+                                          >
+                                            View <ExternalLink className="w-3 h-3" />
+                                          </a>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div className="pt-3 border-t border-gray-100 flex items-center justify-between">
+                                    <span className="text-[11px] text-[#6B7280]">
+                                      Tutor: Mrs Sarah
+                                    </span>
+                                    <button
+                                      onClick={() => handleOpenSubmitModal(a)}
+                                      className="px-3.5 py-1.5 rounded-xl bg-[#1E4E8C] text-white font-bold text-xs hover:bg-[#153763] transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+                                    >
+                                      <span>Mark Complete</span>
+                                      <ArrowRight className="w-3.5 h-3.5 text-[#D4A017]" />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           )}
                         </div>
+                      )}
 
+                      {parentTab === 'submitted' && (
                         <div>
-                          <h3 className="font-heading font-bold text-lg text-[#14263F]">
-                            {a.title}
-                          </h3>
-                          <p className="text-xs text-[#6B7280] mt-1.5 leading-relaxed">
-                            {a.description}
-                          </p>
+                          {childSubmitted.length === 0 ? (
+                            <div className="p-6 text-center bg-gray-50/70 rounded-2xl border border-gray-200/80 text-xs text-[#6B7280]">
+                              No submissions awaiting review for {child.name}.
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                              {childSubmitted.map((a) => {
+                                const sub = submissions[a.id];
+                                return (
+                                  <div
+                                    key={a.id}
+                                    className="bg-white rounded-2xl border border-blue-200 p-5 space-y-4 shadow-2xs"
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-blue-800 bg-blue-50 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                                        <Clock className="w-3 h-3 text-blue-600 animate-spin" />
+                                        Awaiting Mrs Sarah&apos;s Review
+                                      </span>
+                                      <span className="text-[11px] text-[#6B7280]">
+                                        Due {new Date(a.due_date || '').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                                      </span>
+                                    </div>
+
+                                    <h3 className="font-heading font-bold text-base text-[#14263F]">
+                                      {a.title}
+                                    </h3>
+
+                                    {sub && (
+                                      <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-100 space-y-2 text-xs">
+                                        <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider block">
+                                          Your Observation:
+                                        </span>
+                                        <p className="italic text-[#14263F]">
+                                          &ldquo;{sub.submission_note}&rdquo;
+                                        </p>
+
+                                        {sub.submission_photo_url && (
+                                          <div
+                                            onClick={() => setPhotoPreviewModalUrl(sub.submission_photo_url)}
+                                            className="w-20 h-16 rounded-lg overflow-hidden border border-gray-200 cursor-pointer shadow-2xs"
+                                          >
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img
+                                              src={sub.submission_photo_url}
+                                              alt="Evidence"
+                                              className="w-full h-full object-cover"
+                                            />
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
+                      )}
 
-                        {/* Linked Milestone info */}
-                        {a.milestone_name && (
-                          <div className="p-3 bg-[#FCFBF7] rounded-2xl border border-[#F3E7C4] flex items-center gap-2 text-xs">
-                            <Award className="w-4 h-4 text-[#D4A017] shrink-0" />
-                            <div>
-                              <span className="text-[10px] font-bold text-[#6B7280] uppercase block">
-                                Montessori Skill Aim:
-                              </span>
-                              <span className="font-bold text-[#14263F]">{a.milestone_name}</span>
+                      {parentTab === 'reviewed' && (
+                        <div>
+                          {childReviewed.length === 0 ? (
+                            <div className="p-6 text-center bg-gray-50/70 rounded-2xl border border-gray-200/80 text-xs text-[#6B7280]">
+                              No reviewed assignments yet for {child.name}.
                             </div>
-                          </div>
-                        )}
+                          ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                              {childReviewed.map((a) => {
+                                const sub = submissions[a.id];
+                                return (
+                                  <div
+                                    key={a.id}
+                                    className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4 shadow-2xs"
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <h3 className="font-heading font-bold text-base text-[#14263F]">
+                                        {a.title}
+                                      </h3>
+                                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full">
+                                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                        Approved
+                                      </span>
+                                    </div>
 
-                        {/* Attached Learning Resource */}
-                        {a.resource_title && (
-                          <div className="p-3 bg-blue-50/60 rounded-2xl border border-blue-100 flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-2">
-                              <FileText className="w-4 h-4 text-[#1E4E8C] shrink-0" />
-                              <span className="font-bold text-[#1E4E8C] truncate max-w-xs">
-                                {a.resource_title}
-                              </span>
+                                    {sub?.milestone_marked_achieved && a.milestone_name && (
+                                      <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center gap-2 text-emerald-900 text-xs font-bold">
+                                        <Award className="w-4 h-4 text-[#D4A017] shrink-0" />
+                                        <span>Milestone Achieved: {a.milestone_name} 🎉</span>
+                                      </div>
+                                    )}
+
+                                    {sub?.tutor_feedback && (
+                                      <div className="p-3.5 rounded-xl bg-[#FCFBF7] border border-[#F3E7C4] space-y-1 text-xs">
+                                        <span className="text-[10px] font-bold text-[#1E4E8C] uppercase tracking-wider block">
+                                          Mrs Sarah&apos;s Feedback:
+                                        </span>
+                                        <p className="text-[#14263F] leading-relaxed">
+                                          &ldquo;{sub.tutor_feedback}&rdquo;
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
-                            {a.resource_url && (
-                              <a
-                                href={a.resource_url}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-[11px] font-bold text-[#1E4E8C] hover:underline flex items-center gap-1 shrink-0"
-                              >
-                                View File <ExternalLink className="w-3 h-3" />
-                              </a>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Action to Mark Complete */}
-                      <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
-                        <span className="text-[11px] text-[#6B7280]">
-                          Assigned by Mrs Sarah
-                        </span>
-                        <button
-                          onClick={() => handleOpenSubmitModal(a)}
-                          className="px-4 py-2 rounded-xl bg-[#1E4E8C] text-white font-bold text-xs hover:bg-[#153763] transition-all flex items-center gap-1.5 shadow-xs"
-                        >
-                          <span>Complete & Report Back</span>
-                          <ArrowRight className="w-3.5 h-3.5 text-[#D4A017]" />
-                        </button>
-                      </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ========================================================= */}
-          {/* PARENT VIEW: AWAITING REVIEW                              */}
-          {/* ========================================================= */}
-          {!isOwner && parentTab === 'submitted' && (
-            <div className="space-y-6">
-              {submittedList.length === 0 ? (
-                <div className="p-12 text-center bg-white rounded-3xl border border-gray-200 shadow-2xs space-y-3">
-                  <Clock className="w-8 h-8 text-gray-400 mx-auto" />
-                  <h3 className="font-heading font-bold text-base text-[#1E4E8C]">
-                    No Submissions Awaiting Review
-                  </h3>
-                  <p className="text-xs text-[#6B7280]">
-                    When you report back on homework, it will appear here while Mrs Sarah reviews it.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {submittedList.map((a) => {
-                    const sub = submissions[a.id];
-                    return (
-                      <div
-                        key={a.id}
-                        className="bg-white rounded-3xl border border-blue-200 p-6 space-y-4 shadow-2xs"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#E8F0FA] text-[#1E4E8C]">
-                            {a.child_name}
-                          </span>
-                          <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-blue-800 bg-blue-50 px-2.5 py-1 rounded-full uppercase tracking-wider">
-                            <Clock className="w-3 h-3 text-blue-600 animate-spin" />
-                            Awaiting Mrs Sarah&apos;s Review
-                          </span>
-                        </div>
-
-                        <div>
-                          <h3 className="font-heading font-bold text-lg text-[#14263F]">
-                            {a.title}
-                          </h3>
-                          <p className="text-xs text-[#6B7280] mt-1">
-                            {a.description}
-                          </p>
-                        </div>
-
-                        {sub && (
-                          <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100 space-y-3">
-                            <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider block">
-                              Your Submitted Observation:
-                            </span>
-                            <p className="text-xs text-[#14263F] italic">
-                              &ldquo;{sub.submission_note}&rdquo;
-                            </p>
-
-                            {sub.submission_photo_url && (
-                              <div>
-                                <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider block mb-1">
-                                  Uploaded Evidence:
-                                </span>
-                                <div
-                                  onClick={() => setPhotoPreviewModalUrl(sub.submission_photo_url)}
-                                  className="w-24 h-20 rounded-xl overflow-hidden border border-gray-200 cursor-pointer"
-                                >
-                                  <img
-                                    src={sub.submission_photo_url}
-                                    alt="Evidence thumbnail"
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                  );
+                })
               )}
             </div>
           )}
@@ -924,7 +1023,7 @@ export default function AssignmentsPage() {
       )}
 
       {/* ========================================================= */}
-      {/* MODAL 1: CREATE ASSIGNMENT (Owner)                        */}
+      {/* MODAL 1: CREATE 1:1 INDIVIDUAL ASSIGNMENT (Owner)         */}
       {/* ========================================================= */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
@@ -932,59 +1031,62 @@ export default function AssignmentsPage() {
             <div className="flex items-center justify-between pb-3 border-b border-gray-100">
               <div>
                 <h3 className="font-heading font-bold text-lg text-[#1E4E8C]">
-                  Create Home Assignment
+                  Assign Homework to Student
                 </h3>
                 <p className="text-xs text-[#6B7280]">
-                  Assign targeted Montessori home practice to one or several children.
+                  1:1 individualized assignment based on student progress.
                 </p>
               </div>
               <button
                 onClick={() => setIsCreateModalOpen(false)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
+                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
             <form onSubmit={handleCreateAssignmentSubmit} className="space-y-4 text-xs">
-              {/* Children Picker */}
+              {/* Single Child Selection / Confirmation */}
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="font-bold text-[#14263F] uppercase tracking-wider">
-                    Select Students *
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleSelectAllChildren}
-                    className="text-[11px] font-bold text-[#1E4E8C] hover:underline"
-                  >
-                    {createChildIds.length === children.length ? 'Deselect All' : 'Select All'}
-                  </button>
-                </div>
+                <label className="block font-bold text-[#14263F] uppercase tracking-wider mb-1.5">
+                  Student *
+                </label>
+                <select
+                  required
+                  value={createChildId}
+                  onChange={(e) => updateChildForAssignment(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#14263F] focus:ring-2 focus:ring-[#1E4E8C] outline-none"
+                >
+                  <option value="" disabled>-- Select single student --</option>
+                  {children.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} (Age {c.age_years || '—'}) {c.parent_name ? `• Parent: ${c.parent_name}` : ''}
+                    </option>
+                  ))}
+                </select>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto p-2 bg-gray-50 rounded-xl border border-gray-200">
-                  {children.map((c) => {
-                    const isSelected = createChildIds.includes(c.id);
-                    return (
-                      <label
-                        key={c.id}
-                        className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
-                          isSelected
-                            ? 'bg-[#E8F0FA] border-[#1E4E8C] font-bold text-[#1E4E8C]'
-                            : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-100'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => handleToggleChildSelect(c.id)}
-                          className="h-3.5 w-3.5 rounded border-gray-300 text-[#1E4E8C] focus:ring-[#1E4E8C]"
-                        />
-                        <span className="truncate">{c.name}</span>
-                      </label>
-                    );
-                  })}
-                </div>
+                {selectedChild && (
+                  <div className="mt-2 p-3 bg-[#E8F0FA]/70 rounded-xl border border-[#1E4E8C]/20 flex items-center gap-3">
+                    {selectedChild.avatar_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={selectedChild.avatar_url}
+                        alt={selectedChild.name}
+                        className="w-9 h-9 rounded-xl object-cover border border-[#D4A017] shrink-0"
+                      />
+                    ) : (
+                      <div className="w-9 h-9 rounded-xl bg-[#1E4E8C] text-[#D4A017] font-heading font-bold text-sm flex items-center justify-center shrink-0">
+                        {selectedChild.name.charAt(0)}
+                      </div>
+                    )}
+                    <div className="text-[11px] leading-tight">
+                      <span className="font-bold text-[#14263F] block">{selectedChild.name}</span>
+                      <span className="text-[#6B7280]">
+                        Parent: {selectedChild.parent_name || 'Recorded'} • {selectedChild.parent_email || 'Portal account'}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Title */}
@@ -997,7 +1099,7 @@ export default function AssignmentsPage() {
                   required
                   value={createTitle}
                   onChange={(e) => setCreateTitle(e.target.value)}
-                  placeholder="e.g. Tactile Sandpaper Letter Articulation"
+                  placeholder="e.g. Tactile Sandpaper Letter Sound Articulation"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold focus:ring-2 focus:ring-[#1E4E8C] outline-none"
                 />
               </div>
@@ -1005,14 +1107,14 @@ export default function AssignmentsPage() {
               {/* Description / Instructions */}
               <div>
                 <label className="block font-bold text-[#14263F] uppercase tracking-wider mb-1">
-                  Home Instructions & Practice Guide *
+                  Home Practice Guide & Instructions *
                 </label>
                 <textarea
                   required
                   rows={3}
                   value={createDescription}
                   onChange={(e) => setCreateDescription(e.target.value)}
-                  placeholder="Describe step-by-step how parents should guide the activity and what to observe..."
+                  placeholder="Provide clear step-by-step guidance for parent and learner at home..."
                   className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-[#1E4E8C] outline-none resize-none"
                 />
               </div>
@@ -1055,32 +1157,51 @@ export default function AssignmentsPage() {
                 </select>
               </div>
 
-              {/* Due Date */}
-              <div>
-                <label className="block font-bold text-[#14263F] uppercase tracking-wider mb-1">
-                  Target Due Date (Optional)
-                </label>
+              {/* Due Date (STRICTLY REQUIRED & SMART PRE-FILLED) */}
+              <div className="p-3.5 bg-[#FCFBF7] rounded-2xl border border-[#F3E7C4] space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-[#14263F] uppercase tracking-wider">
+                    Target Due Date *
+                  </label>
+                  {suggestedSessionLabel && (
+                    <div className="flex items-center gap-1 text-[11px] font-bold text-[#1E4E8C] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+                      <Sparkles className="w-3 h-3 text-[#D4A017]" />
+                      <span>{suggestedSessionLabel}</span>
+                    </div>
+                  )}
+                </div>
+
+                {!suggestedSessionLabel && (
+                  <p className="text-[11px] text-amber-800">
+                    No upcoming confirmed session booked for this student — please select a target deadline manually.
+                  </p>
+                )}
+
                 <input
                   type="date"
+                  required
                   value={createDueDate}
                   onChange={(e) => setCreateDueDate(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-xs font-semibold focus:ring-2 focus:ring-[#1E4E8C] outline-none"
+                  className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-xs font-semibold focus:ring-2 focus:ring-[#1E4E8C] outline-none bg-white"
                 />
+                <p className="text-[10px] text-[#6B7280]">
+                  Every homework assignment must have a due date to keep the learner engaged between sessions.
+                </p>
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-4 py-2 font-semibold text-gray-500 hover:text-gray-700"
+                  className="px-4 py-2 font-semibold text-gray-500 hover:text-gray-700 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-[#1E4E8C] text-white font-bold text-xs hover:bg-[#153763] transition-all shadow-xs"
+                  className="px-5 py-2.5 rounded-xl bg-[#1E4E8C] text-white font-bold text-xs hover:bg-[#153763] transition-all shadow-xs cursor-pointer"
                 >
-                  Assign to {createChildIds.length} Student{createChildIds.length > 1 ? 's' : ''}
+                  Assign Homework to {selectedChild?.name || 'Student'}
                 </button>
               </div>
             </form>
@@ -1105,7 +1226,7 @@ export default function AssignmentsPage() {
               </div>
               <button
                 onClick={() => setSubmittingAssignment(null)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
+                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 cursor-pointer"
               >
                 ✕
               </button>
@@ -1157,7 +1278,7 @@ export default function AssignmentsPage() {
                         key={p.label}
                         type="button"
                         onClick={() => setSubmissionPhotoUrl(p.url)}
-                        className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-gray-100 hover:bg-gray-200 text-[#1E4E8C]"
+                        className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-gray-100 hover:bg-gray-200 text-[#1E4E8C] cursor-pointer"
                       >
                         + {p.label}
                       </button>
@@ -1166,11 +1287,12 @@ export default function AssignmentsPage() {
 
                   {submissionPhotoUrl && (
                     <div className="mt-2 w-24 h-20 rounded-xl overflow-hidden border border-gray-200 relative">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={submissionPhotoUrl} alt="Preview" className="w-full h-full object-cover" />
                       <button
                         type="button"
                         onClick={() => setSubmissionPhotoUrl('')}
-                        className="absolute top-1 right-1 bg-black/60 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px]"
+                        className="absolute top-1 right-1 bg-black/60 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] cursor-pointer"
                       >
                         ✕
                       </button>
@@ -1183,13 +1305,13 @@ export default function AssignmentsPage() {
                 <button
                   type="button"
                   onClick={() => setSubmittingAssignment(null)}
-                  className="px-4 py-2 font-semibold text-gray-500 hover:text-gray-700"
+                  className="px-4 py-2 font-semibold text-gray-500 hover:text-gray-700 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-[#1E4E8C] text-white font-bold text-xs hover:bg-[#153763] transition-all flex items-center gap-1.5 shadow-xs"
+                  className="px-5 py-2.5 rounded-xl bg-[#1E4E8C] text-white font-bold text-xs hover:bg-[#153763] transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
                 >
                   <Upload className="w-3.5 h-3.5 text-[#D4A017]" />
                   <span>Submit for Sarah&apos;s Review</span>
@@ -1217,7 +1339,7 @@ export default function AssignmentsPage() {
               </div>
               <button
                 onClick={() => setReviewingAssignment(null)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
+                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 cursor-pointer"
               >
                 ✕
               </button>
@@ -1247,6 +1369,7 @@ export default function AssignmentsPage() {
                       onClick={() => setPhotoPreviewModalUrl(reviewingAssignment.submission.submission_photo_url)}
                       className="w-28 h-20 rounded-xl overflow-hidden border border-gray-200 cursor-pointer shadow-2xs hover:opacity-90"
                     >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={reviewingAssignment.submission.submission_photo_url}
                         alt="Evidence"
@@ -1272,7 +1395,7 @@ export default function AssignmentsPage() {
                 />
               </div>
 
-              {/* Milestone Achievement Option (Section 1 & 2 Spec) */}
+              {/* Milestone Achievement Option */}
               {reviewingAssignment.assignment.milestone_name ? (
                 <div className="p-4 rounded-2xl bg-[#FCFBF7] border border-[#F3E7C4] space-y-2">
                   <div className="flex items-center justify-between">
@@ -1304,13 +1427,13 @@ export default function AssignmentsPage() {
                 <button
                   type="button"
                   onClick={() => setReviewingAssignment(null)}
-                  className="px-4 py-2 font-semibold text-gray-500 hover:text-gray-700"
+                  className="px-4 py-2 font-semibold text-gray-500 hover:text-gray-700 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-[#1E4E8C] text-white font-bold text-xs hover:bg-[#153763] transition-all flex items-center gap-1.5 shadow-xs"
+                  className="px-5 py-2.5 rounded-xl bg-[#1E4E8C] text-white font-bold text-xs hover:bg-[#153763] transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#D4A017]" />
                   <span>Approve & Mark Reviewed</span>
@@ -1330,6 +1453,7 @@ export default function AssignmentsPage() {
           className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 cursor-pointer"
         >
           <div className="max-w-2xl w-full bg-white p-2 rounded-3xl overflow-hidden shadow-2xl relative">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={photoPreviewModalUrl}
               alt="Enlarged evidence"

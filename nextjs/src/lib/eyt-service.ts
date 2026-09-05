@@ -1974,24 +1974,47 @@ export const EYTService = {
     return { assignment, submission };
   },
 
+  /**
+   * Retrieves the next upcoming confirmed session for a child (if any),
+   * used to pre-fill the smart required due date for home practice.
+   */
+  getNextConfirmedSession(childId: string): Booking | null {
+    const bookings = this.getBookings();
+    const nowMs = Date.now();
+    const upcoming = bookings
+      .filter((b) => b.child_id === childId && b.status === 'confirmed')
+      .filter((b) => new Date(b.start_time).getTime() > nowMs)
+      .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+
+    return upcoming.length > 0 ? upcoming[0] : null;
+  },
+
+  /**
+   * Creates a homework assignment for exactly ONE specific child.
+   * 1:1 individualized tutoring requirement — no multi-child creation.
+   * Target Due Date is strictly required.
+   */
   createAssignment(data: {
-    childIds: string[];
+    childId: string;
     title: string;
     description: string;
     milestoneId?: string | null;
     resourceId?: string | null;
-    dueDate?: string | null;
-  }): Assignment[] {
+    dueDate: string;
+  }): Assignment {
     const currentUser = this.getCurrentUser();
     if (currentUser.role !== 'owner') {
       throw new Error('[SECURITY VIOLATION] Only Mrs Sarah can create assignments.');
     }
 
-    if (!data.childIds || data.childIds.length === 0) {
-      throw new Error('At least one child must be selected for the assignment.');
+    if (!data.childId) {
+      throw new Error('A student must be selected for the assignment.');
     }
     if (!data.title?.trim() || !data.description?.trim()) {
-      throw new Error('Assignment title and description are required.');
+      throw new Error('Assignment title and practice instructions are required.');
+    }
+    if (!data.dueDate || !data.dueDate.trim()) {
+      throw new Error('Target due date is required. Homework must have a clear completion deadline.');
     }
 
     const allAssignments = storage.get<Assignment[]>('assignments', DEFAULT_ASSIGNMENTS);
@@ -1999,52 +2022,51 @@ export const EYTService = {
     const milestones = this.getMilestones();
     const resources = this.getResources();
 
-    const created: Assignment[] = [];
-
-    for (const childId of data.childIds) {
-      const child = children.find((c) => c.id === childId);
-      const milestone = data.milestoneId ? milestones.find((m) => m.id === data.milestoneId) : undefined;
-      const resource = data.resourceId ? resources.find((r) => r.id === data.resourceId) : undefined;
-
-      const newAssignment: Assignment = {
-        id: `asgn-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        tutor_id: currentUser.id || 'tutor-sarah-id',
-        child_id: childId,
-        title: data.title.trim(),
-        description: data.description.trim(),
-        milestone_id: data.milestoneId || null,
-        resource_id: data.resourceId || null,
-        due_date: data.dueDate || null,
-        status: 'assigned',
-        created_at: new Date().toISOString(),
-        child_name: child?.name || 'Student',
-        parent_name: child?.parent_name || 'Parent',
-        parent_email: child?.parent_email || undefined,
-        parent_profile_id: child?.parent_profile_id || undefined,
-        milestone_name: milestone?.name,
-        milestone_area: milestone?.subject_area,
-        resource_title: resource?.title,
-        resource_url: resource?.file_url,
-      };
-
-      allAssignments.unshift(newAssignment);
-      created.push(newAssignment);
-
-      // Notify parent about new homework assignment
-      if (child?.parent_email) {
-        this.sendAssignmentNotification({
-          recipient_email: child.parent_email,
-          recipient_name: child.parent_name || 'Parent',
-          event_type: 'assignment_created',
-          assignment_id: newAssignment.id,
-          title: `New Montessori Home Activity: ${newAssignment.title}`,
-          message: `Mrs Sarah has assigned a new home activity for ${child.name}: "${newAssignment.title}". Log in to your parent portal to view guidelines and submit progress.`,
-        });
-      }
+    const child = children.find((c) => c.id === data.childId);
+    if (!child) {
+      throw new Error('Selected student could not be found in directory.');
     }
 
+    const milestone = data.milestoneId ? milestones.find((m) => m.id === data.milestoneId) : undefined;
+    const resource = data.resourceId ? resources.find((r) => r.id === data.resourceId) : undefined;
+
+    const newAssignment: Assignment = {
+      id: `asgn-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      tutor_id: currentUser.id || 'tutor-sarah-id',
+      child_id: data.childId,
+      title: data.title.trim(),
+      description: data.description.trim(),
+      milestone_id: data.milestoneId || null,
+      resource_id: data.resourceId || null,
+      due_date: data.dueDate.trim(),
+      status: 'assigned',
+      created_at: new Date().toISOString(),
+      child_name: child.name,
+      parent_name: child.parent_name || 'Parent',
+      parent_email: child.parent_email || undefined,
+      parent_profile_id: child.parent_profile_id || undefined,
+      milestone_name: milestone?.name,
+      milestone_area: milestone?.subject_area,
+      resource_title: resource?.title,
+      resource_url: resource?.file_url,
+    };
+
+    allAssignments.unshift(newAssignment);
     storage.set('assignments', allAssignments);
-    return created;
+
+    // Notify parent about new homework assignment
+    if (child.parent_email) {
+      this.sendAssignmentNotification({
+        recipient_email: child.parent_email,
+        recipient_name: child.parent_name || 'Parent',
+        event_type: 'assignment_created',
+        assignment_id: newAssignment.id,
+        title: `New Montessori Home Activity: ${newAssignment.title}`,
+        message: `Mrs Sarah has assigned a new home activity for ${child.name}: "${newAssignment.title}". Due date: ${new Date(data.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}. Log in to your parent portal to view guidelines and submit progress.`,
+      });
+    }
+
+    return newAssignment;
   },
 
   submitAssignment(

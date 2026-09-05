@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Users, PlusCircle, Award, Calendar, Sparkles, CheckCircle2, Clock, Mail, Phone, Info } from 'lucide-react';
+import { Users, PlusCircle, Award, Calendar, Sparkles, CheckCircle2, Clock, Mail, Phone, Info, BookOpen } from 'lucide-react';
 import { useGlobal } from '@/lib/context/GlobalContext';
 import { EYTService, Child } from '@/lib/eyt-service';
 import AddChildModal from '@/components/AddChildModal';
@@ -245,7 +245,7 @@ export default function ChildrenPage() {
                 </div>
 
                 {/* Footer Link Actions */}
-                <div className="pt-4 border-t border-gray-100 flex items-center justify-between text-xs">
+                <div className="pt-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2 text-xs">
                   <Link
                     href="/app/milestones"
                     className="font-bold text-[#1E4E8C] hover:underline flex items-center gap-1"
@@ -253,6 +253,16 @@ export default function ChildrenPage() {
                     <Award className="w-3.5 h-3.5 text-[#D4A017]" />
                     <span>View Milestones</span>
                   </Link>
+
+                  {isOwner && (
+                    <Link
+                      href={`/app/assignments?childId=${child.id}&action=create`}
+                      className="font-bold text-[#1E4E8C] bg-[#E8F0FA] hover:bg-[#d8e6f7] px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors border border-[#1E4E8C]/20 shadow-2xs"
+                    >
+                      <BookOpen className="w-3.5 h-3.5 text-[#D4A017]" />
+                      <span>Assign Homework</span>
+                    </Link>
+                  )}
 
                   <Link
                     href="/app/schedule"
