@@ -1,27 +1,7 @@
-const CACHE_NAME = 'eyt-cache-v2';
-const STATIC_ASSETS = [
-  '/',
-  '/offline.html',
-  '/images/flyer1.jpeg',
-  '/images/flyer2.jpeg',
-];
+// EYT Academy Service Worker - Passive & Resilient
+const CACHE_VERSION = 'eyt-cache-v3';
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(async (cache) => {
-      for (const asset of STATIC_ASSETS) {
-        try {
-          const req = new Request(asset, { credentials: 'include' });
-          const res = await fetch(req);
-          if (res.ok) {
-            await cache.put(req, res);
-          }
-        } catch {
-          // Gracefully continue caching remaining assets
-        }
-      }
-    })
-  );
   self.skipWaiting();
 });
 
@@ -29,72 +9,15 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
+        keys.map((key) => caches.delete(key))
       );
-    })
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
+// We do not intercept page navigations, auth routes, or API calls.
+// This prevents 408 errors and redirect interference with Next.js & Supabase.
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests
-  if (event.request.method !== 'GET') return;
-
-  const url = new URL(event.request.url);
-
-  // Bypass localhost / dev server completely
-  if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
-    return;
-  }
-
-  // Bypass dev chunks, hot reloads, manifest, Vercel SSO, Supabase API / auth requests
-  if (
-    url.pathname.startsWith('/api') ||
-    url.pathname === '/manifest.json' ||
-    url.hostname.includes('vercel.com') ||
-    url.hostname.includes('supabase.co') ||
-    url.pathname.includes('webpack') ||
-    url.pathname.includes('hot-update')
-  ) {
-    return;
-  }
-
-  event.respondWith(
-    fetch(event.request)
-      .then((networkResponse) => {
-        if (
-          networkResponse.status === 200 &&
-          (url.pathname === '/' ||
-            url.pathname.startsWith('/images') ||
-            url.pathname.startsWith('/icons') ||
-            url.pathname.endsWith('.css') ||
-            url.pathname.endsWith('.js'))
-        ) {
-          const clonedResponse = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, clonedResponse);
-          });
-        }
-        return networkResponse;
-      })
-      .catch(async () => {
-        const cachedResponse = await caches.match(event.request);
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-        if (event.request.mode === 'navigate') {
-          const offlineFallback = await caches.match('/offline.html');
-          if (offlineFallback) return offlineFallback;
-        }
-        // If not found in cache and not navigation, return network error response
-        return new Response('Network error occurred', {
-          status: 408,
-          headers: { 'Content-Type': 'text/plain' },
-        });
-      })
-  );
+  // Pure pass-through: let browser handle all requests natively
+  return;
 });

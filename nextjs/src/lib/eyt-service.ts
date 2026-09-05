@@ -354,7 +354,7 @@ const DEFAULT_CHILDREN: Child[] = [
     parent_email: 'elizabeth@example.com',
     parent_phone: '08023456789',
     has_portal_account: true,
-    avatar_url: 'https://images.unsplash.com/photo-1595454223600-91fb57cb2e1e?auto=format&fit=crop&w=300&q=80',
+    avatar_url: null,
     created_at: new Date().toISOString(),
   },
   {
