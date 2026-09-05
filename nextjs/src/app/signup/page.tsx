@@ -1,14 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { BookOpen, ArrowLeft, Mail, Lock, User, Phone, ShieldCheck, AlertCircle } from 'lucide-react';
+import { BookOpen, ArrowLeft, Mail, Lock, User, Phone, ShieldCheck, AlertCircle, Calendar, Sparkles } from 'lucide-react';
 import { createSPAClient } from '@/lib/supabase/client';
 import { EYTService } from '@/lib/eyt-service';
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const intent = searchParams.get('intent');
+  const isBookingIntent = intent === 'booking';
+
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -28,16 +32,19 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
+      const normalizedEmail = email.trim().toLowerCase();
+      let newUserId = '';
+
       if (EYTService.isSupabaseConfigured()) {
         const client = createSPAClient();
         // Strictly force role to 'parent' — owner/tutor cannot be minted publicly
         const { data: authData, error: signUpError } = await client.auth.signUp({
-          email,
+          email: normalizedEmail,
           password,
           options: {
             data: {
-              full_name: fullName,
-              phone: phone,
+              full_name: fullName.trim(),
+              phone: phone.trim(),
               role: 'parent', // Enforced parent role
             },
           },
@@ -46,28 +53,45 @@ export default function SignupPage() {
         if (signUpError) throw signUpError;
 
         if (authData.user) {
+          newUserId = authData.user.id;
           EYTService.setCurrentUser({
-            id: authData.user.id,
+            id: newUserId,
             role: 'parent',
-            full_name: fullName,
-            email: email,
-            phone: phone,
+            full_name: fullName.trim(),
+            email: normalizedEmail,
+            phone: phone.trim() || null,
             avatar_url: null,
           });
         }
       } else {
         // Fallback for preview before Supabase keys are configured
+        newUserId = `parent-${Date.now()}`;
         EYTService.setCurrentUser({
-          id: `parent-${Date.now()}`,
+          id: newUserId,
           role: 'parent', // Strictly parent
-          full_name: fullName || 'Parent',
-          phone: phone || null,
-          email: email,
+          full_name: fullName.trim() || 'Parent',
+          phone: phone.trim() || null,
+          email: normalizedEmail,
           avatar_url: null,
         });
       }
 
-      router.push('/app?new_account=true');
+      // Automatically link any student profiles Mrs Sarah may have previously created
+      // with matching parent email. Prevents duplicate child profiles!
+      const claimedChildren = EYTService.claimChildrenByParentEmail(
+        normalizedEmail,
+        newUserId,
+        fullName.trim(),
+        phone.trim()
+      );
+
+      if (isBookingIntent) {
+        router.push('/app/schedule?intent=booking&new_account=true');
+      } else if (claimedChildren.length > 0) {
+        router.push('/app?new_account=true&claimed=true');
+      } else {
+        router.push('/app?new_account=true');
+      }
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -92,13 +116,19 @@ export default function SignupPage() {
 
         <div className="text-center">
           <div className="w-14 h-14 rounded-2xl bg-[#1E4E8C] flex items-center justify-center text-white mx-auto border-2 border-[#D4A017] shadow-md">
-            <BookOpen className="w-7 h-7 text-[#D4A017]" />
+            {isBookingIntent ? (
+              <Calendar className="w-7 h-7 text-[#D4A017]" />
+            ) : (
+              <BookOpen className="w-7 h-7 text-[#D4A017]" />
+            )}
           </div>
           <h1 className="font-heading text-2xl sm:text-3xl font-bold text-[#1E4E8C] mt-3">
-            Parent Account Registration
+            {isBookingIntent ? 'Book a Session with Mrs Sarah' : 'Parent Account Registration'}
           </h1>
           <p className="text-xs text-[#6B7280] mt-1">
-            Access lesson schedules, milestone reports, and home materials
+            {isBookingIntent
+              ? 'Create your parent account to choose tutorial timeslots & register your child'
+              : 'Access lesson schedules, milestone reports, and home materials'}
           </p>
         </div>
       </div>
@@ -106,10 +136,19 @@ export default function SignupPage() {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-6 shadow-xl rounded-3xl border border-gray-100 sm:px-10 space-y-6">
           
-          <div className="p-3 bg-[#E8F0FA] rounded-xl border border-[#C7DAF3] flex items-center gap-2.5 text-xs text-[#1E4E8C]">
-            <ShieldCheck className="w-4 h-4 text-[#D4A017] shrink-0" />
-            <span>Public registration creates a secure <strong>Parent Portal</strong> account.</span>
-          </div>
+          {isBookingIntent ? (
+            <div className="p-3.5 bg-amber-50 rounded-xl border border-amber-200 flex items-start gap-2.5 text-xs text-amber-900">
+              <Sparkles className="w-4 h-4 text-[#D4A017] shrink-0 mt-0.5" />
+              <div>
+                <strong>High-Intent Booking:</strong> Complete your quick parent setup to select your child’s learning mode (Online or Home) and reserve tutorial slots directly.
+              </div>
+            </div>
+          ) : (
+            <div className="p-3 bg-[#E8F0FA] rounded-xl border border-[#C7DAF3] flex items-center gap-2.5 text-xs text-[#1E4E8C]">
+              <ShieldCheck className="w-4 h-4 text-[#D4A017] shrink-0" />
+              <span>Public registration creates a secure <strong>Parent Portal</strong> account.</span>
+            </div>
+          )}
 
           {error && (
             <div className="p-3.5 bg-rose-50 text-rose-700 text-xs rounded-xl border border-rose-200 flex items-start gap-2">
@@ -168,6 +207,9 @@ export default function SignupPage() {
                 />
                 <Mail className="w-4 h-4 text-gray-400 absolute left-3.5 top-3.5" />
               </div>
+              <p className="text-[11px] text-gray-500 mt-1">
+                If Mrs Sarah previously enrolled your child, use the same email to automatically connect your child&apos;s records.
+              </p>
             </div>
 
             <div>
@@ -181,7 +223,7 @@ export default function SignupPage() {
                   minLength={6}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 6 characters"
+                  placeholder="••••••••"
                   className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-[#1E4E8C] focus:border-transparent outline-none transition-all"
                 />
                 <Lock className="w-4 h-4 text-gray-400 absolute left-3.5 top-3.5" />
@@ -191,21 +233,43 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 px-4 rounded-xl bg-[#D4A017] text-white text-sm font-bold hover:bg-[#A9790A] transition-all shadow-md shadow-amber-200 disabled:opacity-50"
+              className="w-full mt-2 py-3.5 px-4 rounded-xl bg-[#1E4E8C] text-white font-bold text-sm hover:bg-[#153763] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1E4E8C] transition-all shadow-md shadow-blue-200/50 disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {loading ? 'Creating Account...' : 'Create Parent Account'}
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : isBookingIntent ? (
+                'Continue to Booking Schedule →'
+              ) : (
+                'Create Parent Account'
+              )}
             </button>
           </form>
 
-          <div className="text-center text-xs text-[#6B7280] pt-2 border-t border-gray-100">
-            <span>Already have an account? </span>
-            <Link href="/login" className="font-bold text-[#1E4E8C] hover:underline">
-              Sign in here
-            </Link>
+          <div className="pt-4 border-t border-gray-100 text-center space-y-2">
+            <p className="text-xs text-[#6B7280]">
+              Already have an account?{' '}
+              <Link href="/login" className="font-bold text-[#1E4E8C] hover:underline">
+                Sign In to Portal
+              </Link>
+            </p>
           </div>
 
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[#F3F7FD]/40">
+          <div className="w-8 h-8 border-3 border-[#1E4E8C] border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <SignupForm />
+    </Suspense>
   );
 }

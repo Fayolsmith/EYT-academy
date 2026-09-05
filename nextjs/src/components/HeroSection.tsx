@@ -67,11 +67,11 @@ export default function HeroSection() {
             {/* Primary Action Buttons */}
             <div className="flex flex-wrap items-center gap-4 pt-4">
               <Link
-                href="#enquiry"
+                href="/signup?intent=booking"
                 className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-[#D4A017] text-white font-bold text-base hover:bg-[#A9790A] transition-all shadow-md shadow-amber-200/50 hover:shadow-lg hover:-translate-y-0.5"
               >
                 <Calendar className="w-5 h-5" />
-                Book a Session / Enquire
+                Book a Session
               </Link>
 
               <Link

@@ -13,6 +13,10 @@ export interface Child {
   age_years: number | null;
   notes: string | null;
   learning_goals: string | null;
+  parent_name?: string | null;
+  parent_email?: string | null;
+  parent_phone?: string | null;
+  has_portal_account?: boolean;
   created_at: string;
 }
 
@@ -186,6 +190,10 @@ const DEFAULT_CHILDREN: Child[] = [
     age_years: 5,
     notes: 'Very energetic, loves Montessori sensory math beads and hands-on building blocks.',
     learning_goals: 'Master CVC blending and phonics digraphs (sh, ch).',
+    parent_name: 'Mrs Elizabeth Adeleke',
+    parent_email: 'elizabeth@example.com',
+    parent_phone: '08023456789',
+    has_portal_account: true,
     created_at: new Date().toISOString(),
   },
   {
@@ -196,6 +204,24 @@ const DEFAULT_CHILDREN: Child[] = [
     age_years: 3,
     notes: 'Gentle learner, developing pincer grip and starting sound recognition.',
     learning_goals: 'Letter sounds Phase 1 and counting objects 1-10.',
+    parent_name: 'Mrs Elizabeth Adeleke',
+    parent_email: 'elizabeth@example.com',
+    parent_phone: '08023456789',
+    has_portal_account: true,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'child-3',
+    parent_profile_id: 'unclaimed-uche@example.com',
+    name: 'Tobi Balogun',
+    date_of_birth: '2020-09-10',
+    age_years: 6,
+    notes: 'Transitioning to Primary 1, focuses on reading comprehension and mental maths.',
+    learning_goals: 'Phonics digraphs, CVC fluency, and addition within 20.',
+    parent_name: 'Mr Uche Balogun',
+    parent_email: 'uche@example.com',
+    parent_phone: '08098765432',
+    has_portal_account: false,
     created_at: new Date().toISOString(),
   },
 ];
@@ -451,9 +477,37 @@ export const EYTService = {
     return DEFAULT_PARENT_PROFILE;
   },
 
+  /**
+   * Look up a registered user profile by email
+   */
+  findUserByEmail(email: string): UserProfile | null {
+    if (!email) return null;
+    const normalized = email.trim().toLowerCase();
+    if (normalized === DEFAULT_PARENT_PROFILE.email.toLowerCase()) {
+      return DEFAULT_PARENT_PROFILE;
+    }
+    if (normalized === DEFAULT_SARAH_PROFILE.email.toLowerCase()) {
+      return DEFAULT_SARAH_PROFILE;
+    }
+    const registeredUsers = storage.get<UserProfile[]>('registered_users', []);
+    return registeredUsers.find((u) => u.email.toLowerCase() === normalized) || null;
+  },
+
+  saveRegisteredUser(user: UserProfile) {
+    const users = storage.get<UserProfile[]>('registered_users', []);
+    const idx = users.findIndex((u) => u.email.toLowerCase() === user.email.toLowerCase());
+    if (idx >= 0) {
+      users[idx] = user;
+    } else {
+      users.push(user);
+    }
+    storage.set('registered_users', users);
+  },
+
   setCurrentUser(user: UserProfile) {
     storage.set('current_user', user);
     storage.set('is_authenticated', true);
+    this.saveRegisteredUser(user);
     if (typeof document !== 'undefined') {
       document.cookie = 'eyt_auth=true; path=/; max-age=604800; SameSite=Lax';
     }
@@ -483,25 +537,132 @@ export const EYTService = {
   getChildren(parentProfileId?: string): Child[] {
     const all = storage.get<Child[]>('children', DEFAULT_CHILDREN);
     if (!parentProfileId) return all;
-    return all.filter((c) => c.parent_profile_id === parentProfileId);
+
+    const currentUser = this.getCurrentUser();
+    const currentEmail = currentUser?.email?.toLowerCase().trim();
+
+    return all.filter((c) => {
+      if (c.parent_profile_id === parentProfileId) return true;
+      if (currentEmail && c.parent_email?.toLowerCase().trim() === currentEmail) return true;
+      return false;
+    });
   },
 
-  addChild(data: { name: string; date_of_birth?: string; age_years?: number; notes?: string; learning_goals?: string }): Child {
+  /**
+   * Adds a child profile.
+   * If added by Owner (Mrs Sarah), requires parent contact information (name & email).
+   * If that parent has not registered yet, child is created with has_portal_account: false
+   * and linked automatically when the parent signs up with that email.
+   */
+  addChild(data: {
+    name: string;
+    date_of_birth?: string;
+    age_years?: number;
+    notes?: string;
+    learning_goals?: string;
+    parent_name?: string;
+    parent_email?: string;
+    parent_phone?: string;
+    parent_profile_id?: string;
+    has_portal_account?: boolean;
+  }): Child {
     const children = this.getChildren();
     const currentUser = this.getCurrentUser();
+
+    let parentProfileId = data.parent_profile_id;
+    let parentName = data.parent_name?.trim();
+    let parentEmail = data.parent_email?.trim().toLowerCase();
+    let parentPhone = data.parent_phone?.trim();
+    let hasPortalAccount = data.has_portal_account;
+
+    if (currentUser.role === 'owner') {
+      if (!parentEmail && !parentProfileId) {
+        throw new Error('Parent email is required when tutor adds a student profile.');
+      }
+
+      const existingUser = parentEmail ? this.findUserByEmail(parentEmail) : null;
+      if (existingUser) {
+        parentProfileId = existingUser.id;
+        hasPortalAccount = true;
+        parentName = parentName || existingUser.full_name;
+        parentPhone = parentPhone || existingUser.phone || undefined;
+      } else {
+        parentProfileId = parentProfileId || `unclaimed-${parentEmail}`;
+        hasPortalAccount = false;
+      }
+    } else {
+      parentProfileId = currentUser.id;
+      parentName = parentName || currentUser.full_name;
+      parentEmail = parentEmail || currentUser.email.toLowerCase();
+      parentPhone = parentPhone || currentUser.phone || undefined;
+      hasPortalAccount = true;
+    }
+
     const newChild: Child = {
       id: `child-${Date.now()}`,
-      parent_profile_id: currentUser.id,
-      name: data.name,
+      parent_profile_id: parentProfileId || currentUser.id,
+      name: data.name.trim(),
       date_of_birth: data.date_of_birth || null,
       age_years: data.age_years || null,
       notes: data.notes || null,
       learning_goals: data.learning_goals || null,
+      parent_name: parentName || null,
+      parent_email: parentEmail || null,
+      parent_phone: parentPhone || null,
+      has_portal_account: Boolean(hasPortalAccount),
       created_at: new Date().toISOString(),
     };
+
     children.push(newChild);
     storage.set('children', children);
     return newChild;
+  },
+
+  /**
+   * Links any unclaimed or pre-existing child records matching a parent email
+   * to a newly registered parent account upon signup.
+   * Prevents duplicate child profiles and avoids manual re-entry.
+   */
+  claimChildrenByParentEmail(
+    parentEmail: string,
+    parentProfileId: string,
+    parentName?: string,
+    parentPhone?: string
+  ): Child[] {
+    if (!parentEmail) return [];
+    const normalizedEmail = parentEmail.trim().toLowerCase();
+    const children = this.getChildren();
+    let updated = false;
+
+    const claimed: Child[] = [];
+
+    const modifiedChildren = children.map((child) => {
+      const childEmail = child.parent_email?.trim().toLowerCase();
+      const isUnclaimedMatch =
+        child.parent_profile_id === `unclaimed-${normalizedEmail}` ||
+        childEmail === normalizedEmail;
+
+      if (isUnclaimedMatch) {
+        updated = true;
+        const linkedChild: Child = {
+          ...child,
+          parent_profile_id: parentProfileId,
+          has_portal_account: true,
+          parent_name: child.parent_name || parentName || null,
+          parent_email: normalizedEmail,
+          parent_phone: child.parent_phone || parentPhone || null,
+        };
+        claimed.push(linkedChild);
+        return linkedChild;
+      }
+      return child;
+    });
+
+    if (updated) {
+      storage.set('children', modifiedChildren);
+    }
+
+    return claimed;
   },
 
   updateChild(id: string, data: Partial<Child>): Child | null {

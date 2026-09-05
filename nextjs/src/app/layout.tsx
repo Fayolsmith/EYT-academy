@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Karla } from "next/font/google";
 import "./globals.css";
+import { PWAProvider } from "@/lib/context/PWAContext";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -49,7 +51,10 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body className="font-body bg-white text-[#14263F] min-h-screen antialiased selection:bg-[#E8F0FA] selection:text-[#1E4E8C]">
-        {children}
+        <PWAProvider>
+          {children}
+          <PWAInstallPrompt />
+        </PWAProvider>
         <script
           dangerouslySetInnerHTML={{
             __html: `

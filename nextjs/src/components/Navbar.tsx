@@ -5,19 +5,15 @@ import Link from 'next/link';
 import { Menu, X, BookOpen, Phone, Sparkles, Download, LayoutDashboard } from 'lucide-react';
 import { createSPAClient } from '@/lib/supabase/client';
 import { EYTService, UserProfile } from '@/lib/eyt-service';
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-}
+import { usePWA } from '@/lib/context/PWAContext';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authProfile, setAuthProfile] = useState<UserProfile | null>(null);
-  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstallable, setIsInstallable] = useState(false);
   const [isDev, setIsDev] = useState(false);
+
+  const { isInstallable, promptInstall } = usePWA();
 
   const checkAuth = async () => {
     if (EYTService.isSupabaseConfigured()) {
@@ -62,6 +58,7 @@ export default function Navbar() {
   useEffect(() => {
     checkAuth();
 
+    // Dev indicator strictly active only in development on localhost
     if (
       process.env.NODE_ENV === 'development' &&
       typeof window !== 'undefined' &&
@@ -85,31 +82,7 @@ export default function Navbar() {
         subscription.unsubscribe();
       };
     }
-
-    const handleBeforeInstall = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
-      setIsInstallable(true);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
-    };
   }, []);
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) {
-      alert('To install on iOS: Tap Share then "Add to Home Screen". On Android: Tap browser menu then "Install App".');
-      return;
-    }
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setIsInstallable(false);
-    }
-    setDeferredPrompt(null);
-  };
 
   const handleSignOut = async () => {
     try {
@@ -128,7 +101,7 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Top Notification / Role Bar */}
+      {/* Top Notification Bar: Limited to announcements and direct contact */}
       <div className="bg-[#1E4E8C] text-white text-xs sm:text-sm py-1.5 px-4 font-body border-b border-[#153763]">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
@@ -147,42 +120,15 @@ export default function Navbar() {
               <Phone className="w-3.5 h-3.5 text-[#D4A017]" />
               <span className="font-semibold">09133651659</span>
             </a>
-
-            {isAuthenticated ? (
-              <div className="flex items-center gap-2">
-                <span className="text-blue-100 hidden sm:inline">
-                  Signed in as <strong className="text-amber-300 font-bold">{authProfile?.full_name}</strong>
-                </span>
-                <button
-                  onClick={handleSignOut}
-                  className="text-amber-300 hover:text-white transition-colors font-bold text-xs underline underline-offset-2"
-                >
-                  Sign Out
-                </button>
-              </div>
-            ) : (
-              <Link
-                href="/login"
-                className="text-blue-100 hover:text-white transition-colors font-semibold text-xs underline decoration-amber-400 underline-offset-2"
-              >
-                Sign In
-              </Link>
-            )}
-
-            {isDev && (
-              <span className="hidden lg:inline text-[10px] text-amber-300 bg-white/10 px-1.5 py-0.5 rounded border border-white/20">
-                Localhost Dev
-              </span>
-            )}
           </div>
         </div>
       </div>
 
       {/* Main Navigation */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20 items-center">
-            {/* Logo */}
+            {/* Logo: Brand mark and 'Mrs Sarah' only (no persistent age descriptor) */}
             <Link href="/" className="flex items-center gap-3 group">
               <div className="w-12 h-12 rounded-xl bg-[#1E4E8C] flex items-center justify-center text-white shadow-md group-hover:bg-[#153763] transition-colors relative overflow-hidden border border-[#D4A017]">
                 <BookOpen className="w-6 h-6 text-[#D4A017]" />
@@ -190,14 +136,9 @@ export default function Navbar() {
                   ★
                 </div>
               </div>
-              <div className="flex flex-col">
-                <span className="font-heading text-xl sm:text-2xl font-bold text-[#1E4E8C] leading-tight">
-                  Mrs Sarah
-                </span>
-                <span className="text-xs text-[#6B7280] font-medium tracking-wide">
-                  Early Years Tutoring (Ages 3–8)
-                </span>
-              </div>
+              <span className="font-heading text-xl sm:text-2xl font-bold text-[#1E4E8C] leading-tight">
+                Mrs Sarah
+              </span>
             </Link>
 
             {/* Desktop Navigation Links */}
@@ -222,12 +163,13 @@ export default function Navbar() {
               </Link>
             </nav>
 
-            {/* Desktop Action Buttons */}
+            {/* Desktop Action Buttons: Exactly ONE entry point for Sign In/Dashboard */}
             <div className="hidden sm:flex items-center space-x-3">
               {isInstallable && (
                 <button
-                  onClick={handleInstallClick}
+                  onClick={promptInstall}
                   className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-[#E8F0FA] text-[#1E4E8C] hover:bg-[#d8e6f7] transition-all border border-[#C7DAF3]"
+                  title="Install Progressive Web App"
                 >
                   <Download className="w-3.5 h-3.5" />
                   Install App
@@ -254,7 +196,7 @@ export default function Navbar() {
                 <>
                   <Link
                     href="/login"
-                    className="text-xs font-semibold text-[#14263F] hover:text-[#1E4E8C] px-2 py-1 transition-colors"
+                    className="text-xs font-semibold text-[#14263F] hover:text-[#1E4E8C] px-3 py-2 transition-colors"
                   >
                     Sign In
                   </Link>
@@ -341,7 +283,7 @@ export default function Navbar() {
                 onClick={() => setIsOpen(false)}
                 className="px-3 py-2 rounded-md text-base font-medium text-[#14263F] hover:bg-[#E8F0FA] hover:text-[#1E4E8C]"
               >
-                Public Enquiry
+                Contact
               </Link>
             </div>
 
@@ -372,20 +314,23 @@ export default function Navbar() {
                     onClick={() => setIsOpen(false)}
                     className="w-full text-center py-2.5 rounded-lg border border-[#1E4E8C] text-[#1E4E8C] font-semibold text-sm hover:bg-[#E8F0FA]"
                   >
-                    Sign In (Portal Login)
+                    Sign In
                   </Link>
                   <Link
                     href="#enquiry"
                     onClick={() => setIsOpen(false)}
                     className="w-full text-center py-2.5 rounded-lg bg-[#D4A017] text-white font-semibold text-sm"
                   >
-                    Book / Send Enquiry
+                    Enquire Now
                   </Link>
                 </>
               )}
               {isInstallable && (
                 <button
-                  onClick={handleInstallClick}
+                  onClick={() => {
+                    setIsOpen(false);
+                    promptInstall();
+                  }}
                   className="w-full py-2.5 rounded-lg bg-[#E8F0FA] text-[#1E4E8C] font-semibold text-sm flex items-center justify-center gap-2"
                 >
                   <Download className="w-4 h-4" />
@@ -396,6 +341,16 @@ export default function Navbar() {
           </div>
         )}
       </header>
+
+      {/* Dev-only unobtrusive indicator: completely absent in production / Vercel preview */}
+      {isDev && (
+        <aside
+          aria-hidden="true"
+          className="fixed bottom-2 right-2 z-50 pointer-events-none opacity-50 hover:opacity-100 transition-opacity bg-neutral-900/90 text-amber-300 text-[10px] font-mono px-2 py-0.5 rounded border border-neutral-700 shadow"
+        >
+          dev:localhost
+        </aside>
+      )}
     </>
   );
 }

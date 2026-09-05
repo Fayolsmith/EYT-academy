@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Users,
@@ -29,17 +29,21 @@ export default function DashboardPage() {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [isAddChildOpen, setIsAddChildOpen] = useState(false);
 
-  const loadDashboardData = () => {
-    setChildren(EYTService.getChildren());
+  const loadDashboardData = useCallback(() => {
+    if (isOwner) {
+      setChildren(EYTService.getChildren());
+    } else {
+      setChildren(EYTService.getChildren(profile?.id));
+    }
     setBookings(EYTService.getBookings());
     setEnquiries(EYTService.getEnquiries());
     setInvoices(EYTService.getInvoices());
     setMilestones(EYTService.getMilestones());
-  };
+  }, [isOwner, profile?.id]);
 
   useEffect(() => {
     loadDashboardData();
-  }, [profile]);
+  }, [loadDashboardData]);
 
   const handleChildAdded = (newChild: Child) => {
     setChildren([...children, newChild]);
@@ -68,7 +72,24 @@ export default function DashboardPage() {
 
         {/* Action button */}
         <div className="flex items-center gap-3 relative z-10">
-          {!isOwner ? (
+          {isOwner ? (
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                onClick={() => setIsAddChildOpen(true)}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#D4A017] text-white font-bold text-sm hover:bg-[#A9790A] transition-all shadow-sm shadow-amber-200"
+              >
+                <PlusCircle className="w-4 h-4" />
+                Enroll Student
+              </button>
+              <Link
+                href="#enquiries-table"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1E4E8C] text-white font-bold text-sm hover:bg-[#153763] transition-all shadow-sm"
+              >
+                <Mail className="w-4 h-4 text-[#D4A017]" />
+                Enquiries ({enquiries.filter(e => e.status === 'new').length} New)
+              </Link>
+            </div>
+          ) : (
             <button
               onClick={() => setIsAddChildOpen(true)}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#D4A017] text-white font-bold text-sm hover:bg-[#A9790A] transition-all shadow-sm shadow-amber-200"
@@ -76,14 +97,6 @@ export default function DashboardPage() {
               <PlusCircle className="w-4 h-4" />
               Add Child Profile
             </button>
-          ) : (
-            <Link
-              href="#enquiries-table"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1E4E8C] text-white font-bold text-sm hover:bg-[#153763] transition-all shadow-sm"
-            >
-              <Mail className="w-4 h-4 text-[#D4A017]" />
-              View Enquiries ({enquiries.filter(e => e.status === 'new').length} New)
-            </Link>
           )}
         </div>
 
@@ -444,34 +457,60 @@ export default function DashboardPage() {
           {/* Student Directory & Bookings */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div className="lg:col-span-7 bg-white rounded-2xl p-6 border border-gray-200 shadow-sm space-y-4">
-              <h2 className="font-heading text-xl font-bold text-[#1E4E8C] flex items-center gap-2">
-                <Users className="w-5 h-5 text-[#D4A017]" />
-                Enrolled Students
-              </h2>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-heading text-xl font-bold text-[#1E4E8C] flex items-center gap-2">
+                    <Users className="w-5 h-5 text-[#D4A017]" />
+                    Enrolled Students ({children.length})
+                  </h2>
+                  <p className="text-xs text-[#6B7280]">
+                    Students enrolled in active Montessori tutorial programs
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsAddChildOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#D4A017] text-white text-xs font-bold hover:bg-[#A9790A] transition-all shadow-xs"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  Enroll Student
+                </button>
+              </div>
 
               <div className="space-y-3">
                 {children.map((child) => (
                   <div
                     key={child.id}
-                    className="p-4 rounded-xl border border-gray-100 bg-[#FCFBF7] flex items-center justify-between"
+                    className="p-4 rounded-xl border border-gray-100 bg-[#FCFBF7] flex items-center justify-between gap-3"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#1E4E8C] text-white flex items-center justify-center font-bold">
+                      <div className="w-10 h-10 rounded-xl bg-[#1E4E8C] text-white flex items-center justify-center font-bold shrink-0">
                         {child.name.charAt(0)}
                       </div>
                       <div>
-                        <div className="font-bold text-sm text-[#14263F]">{child.name}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm text-[#14263F]">{child.name}</span>
+                          {child.has_portal_account ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              Portal Active
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                              No portal access yet
+                            </span>
+                          )}
+                        </div>
                         <div className="text-xs text-[#6B7280]">
-                          Age: {child.age_years} • Goals: {child.learning_goals || 'Montessori fundamentals'}
+                          Parent: {child.parent_name || 'Unassigned'} ({child.parent_email || 'No email'}) • Age: {child.age_years}
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-bold text-[#1E4E8C] px-2.5 py-1 rounded-lg bg-white border border-gray-200">
-                        {child.notes ? 'Special Notes' : 'Standard'}
-                      </span>
-                    </div>
+                    <Link
+                      href="/app/children"
+                      className="text-xs font-bold text-[#1E4E8C] hover:underline shrink-0"
+                    >
+                      View Directory →
+                    </Link>
                   </div>
                 ))}
               </div>

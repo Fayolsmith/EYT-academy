@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Users, PlusCircle, Award, Calendar, Sparkles } from 'lucide-react';
+import { Users, PlusCircle, Award, Calendar, Sparkles, CheckCircle2, Clock, Mail, Phone, Info } from 'lucide-react';
 import { useGlobal } from '@/lib/context/GlobalContext';
 import { EYTService, Child } from '@/lib/eyt-service';
 import AddChildModal from '@/components/AddChildModal';
@@ -14,13 +14,17 @@ export default function ChildrenPage() {
   const [children, setChildren] = useState<Child[]>([]);
   const [isAddChildOpen, setIsAddChildOpen] = useState(false);
 
-  const loadData = () => {
-    setChildren(EYTService.getChildren());
-  };
+  const loadData = useCallback(() => {
+    if (isOwner) {
+      setChildren(EYTService.getChildren());
+    } else {
+      setChildren(EYTService.getChildren(profile?.id));
+    }
+  }, [isOwner, profile?.id]);
 
   useEffect(() => {
     loadData();
-  }, [profile]);
+  }, [loadData]);
 
   const handleChildAdded = (newChild: Child) => {
     setChildren([...children, newChild]);
@@ -41,8 +45,8 @@ export default function ChildrenPage() {
           </h1>
           <p className="text-xs sm:text-sm text-[#6B7280] mt-1">
             {isOwner
-              ? 'View all registered early years learners, developmental age groups, and notes.'
-              : 'Manage your children’s profiles, age groupings, and specific learning focus goals.'}
+              ? 'View all enrolled early years learners, link parent contacts, and track portal activation status.'
+              : 'Manage your children’s profiles, age groupings, and tailored learning focus goals.'}
           </p>
         </div>
 
@@ -51,9 +55,23 @@ export default function ChildrenPage() {
           className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#D4A017] text-white font-bold text-sm hover:bg-[#A9790A] transition-all shadow-sm shadow-amber-200 self-start sm:self-auto"
         >
           <PlusCircle className="w-4 h-4" />
-          Add Child Profile
+          {isOwner ? 'Enroll Student' : 'Add Child Profile'}
         </button>
       </div>
+
+      {/* Owner Info Box regarding Parent Linking */}
+      {isOwner && (
+        <div className="p-4 bg-[#E8F0FA]/70 border border-[#C7DAF3] rounded-2xl flex items-start gap-3 text-xs text-[#1E4E8C]">
+          <Info className="w-4 h-4 text-[#D4A017] shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <span className="font-bold">Automated Parent-Child Account Linking:</span>
+            <p className="text-[#14263F]/90 leading-relaxed">
+              When you enroll a child with a parent’s email, you can immediately manage schedules, lesson notes, and milestones.
+              As soon as the parent registers at <strong>/signup</strong> with that matching email, this profile will automatically connect to their Parent Portal account without creating duplicates.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Children List */}
       {children.length === 0 ? (
@@ -62,16 +80,18 @@ export default function ChildrenPage() {
             <Users className="w-8 h-8 text-[#D4A017]" />
           </div>
           <h3 className="font-heading text-xl font-bold text-[#1E4E8C]">
-            No children registered yet
+            {isOwner ? 'No students enrolled yet' : 'No children registered yet'}
           </h3>
           <p className="text-sm text-[#6B7280] max-w-md mx-auto">
-            Add your child’s profile to get started with tailored Montessori lessons, milestone tracking, and lesson scheduling.
+            {isOwner
+              ? 'Enroll your existing tutorial students and connect them with their parent contacts to begin tracking milestones.'
+              : 'Add your child’s profile to get started with tailored Montessori lessons, milestone tracking, and lesson scheduling.'}
           </p>
           <button
             onClick={() => setIsAddChildOpen(true)}
             className="px-5 py-2.5 rounded-xl bg-[#D4A017] text-white font-bold text-sm hover:bg-[#A9790A] transition-all"
           >
-            Register First Child
+            {isOwner ? 'Enroll First Student' : 'Register First Child'}
           </button>
         </div>
       ) : (
@@ -88,7 +108,7 @@ export default function ChildrenPage() {
               >
                 <div className="space-y-4">
                   {/* Top Bar */}
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-2xl bg-[#1E4E8C] text-[#D4A017] font-heading font-bold text-xl flex items-center justify-center shadow-xs">
                         {child.name.charAt(0)}
@@ -103,10 +123,63 @@ export default function ChildrenPage() {
                       </div>
                     </div>
 
-                    <span className="bg-[#FCFBF7] border border-amber-200 text-[#D4A017] text-[11px] font-bold px-2.5 py-1 rounded-full">
-                      {achievedCount} Skills Mastered
-                    </span>
+                    {/* Status Badge in Owner View */}
+                    {isOwner ? (
+                      <div>
+                        {child.has_portal_account ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Portal Active
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                            <Clock className="w-3 h-3 text-amber-600" />
+                            No portal access yet
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="bg-[#FCFBF7] border border-amber-200 text-[#D4A017] text-[11px] font-bold px-2.5 py-1 rounded-full">
+                        {achievedCount} Skills Mastered
+                      </span>
+                    )}
                   </div>
+
+                  {/* Owner View: Parent Contact Details & Transition Status */}
+                  {isOwner && (
+                    <div className="p-3 bg-[#F8FAFC] rounded-xl border border-gray-200/80 text-xs space-y-1.5">
+                      <div className="flex items-center justify-between font-bold text-[#1E4E8C]">
+                        <span>Parent Contact:</span>
+                        {!child.has_portal_account && (
+                          <span className="text-[10px] text-amber-700 bg-amber-100/80 px-1.5 py-0.5 rounded font-semibold">
+                            Awaiting Signup
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-sm font-semibold text-[#14263F]">
+                        {child.parent_name || 'Parent name unrecorded'}
+                      </div>
+                      <div className="text-xs text-[#6B7280] flex flex-wrap items-center gap-x-4 gap-y-1">
+                        {child.parent_email && (
+                          <span className="flex items-center gap-1">
+                            <Mail className="w-3 h-3 text-gray-400" />
+                            {child.parent_email}
+                          </span>
+                        )}
+                        {child.parent_phone && (
+                          <span className="flex items-center gap-1">
+                            <Phone className="w-3 h-3 text-gray-400" />
+                            {child.parent_phone}
+                          </span>
+                        )}
+                      </div>
+                      {!child.has_portal_account && child.parent_email && (
+                        <p className="text-[10px] text-gray-500 italic pt-1 border-t border-gray-100">
+                          Auto-links when parent creates an account with {child.parent_email}
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   {/* Learning Goals */}
                   {child.learning_goals && (
@@ -129,7 +202,7 @@ export default function ChildrenPage() {
                   {/* Skill stats pill */}
                   <div className="grid grid-cols-2 gap-2 text-center text-xs pt-1">
                     <div className="p-2 bg-emerald-50 text-emerald-800 rounded-lg font-medium border border-emerald-100">
-                      <strong>{achievedCount}</strong> Achieved
+                      <strong>{achievedCount}</strong> Mastered
                     </div>
                     <div className="p-2 bg-amber-50 text-amber-800 rounded-lg font-medium border border-amber-100">
                       <strong>{inProgressCount}</strong> In Progress
@@ -144,7 +217,7 @@ export default function ChildrenPage() {
                     className="font-bold text-[#1E4E8C] hover:underline flex items-center gap-1"
                   >
                     <Award className="w-3.5 h-3.5 text-[#D4A017]" />
-                    <span>View Milestone Progress</span>
+                    <span>View Milestones</span>
                   </Link>
 
                   <Link
@@ -152,7 +225,7 @@ export default function ChildrenPage() {
                     className="font-bold text-[#D4A017] hover:underline flex items-center gap-1"
                   >
                     <Calendar className="w-3.5 h-3.5" />
-                    <span>Schedule Tutorial</span>
+                    <span>{isOwner ? 'Schedule Slot' : 'Schedule Tutorial'}</span>
                   </Link>
                 </div>
               </div>

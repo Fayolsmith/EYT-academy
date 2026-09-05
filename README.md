@@ -36,8 +36,8 @@ The platform features:
    - **No public UI path or API parameter can mint `owner` or `tutor` accounts.**
 
 3. **Production Mode Guard**:
-   - The quick role preview switcher is strictly restricted to local development (process.env.NODE_ENV === 'development' on localhost).
-   - On deployed production previews (e.g., Vercel), the role preview switcher is completely hidden and disabled. All users must authenticate through real Supabase Auth.
+   - The quick role preview switcher is strictly restricted to local development (`process.env.NODE_ENV === 'development'` on localhost).
+   - On deployed production previews (e.g., Vercel), the role preview switcher and dev indicators are completely hidden and disabled. All users authenticate through real Supabase Auth.
 
 ---
 
@@ -51,15 +51,15 @@ Because public signups can never create an owner account, Mrs Sarah's administra
    - Go to your [Supabase Project Dashboard](https://app.supabase.com).
    - Navigate to **Authentication** -> **Users**.
    - Click **Add user** -> **Create user**.
-   - Enter Mrs Sarah's email: sarahoakhena@gmail.com (or your preferred administrative email).
+   - Enter Mrs Sarah's email: `sarahoakhena@gmail.com` (or your preferred administrative email).
    - Set a strong password.
    - Ensure **Auto Confirm User?** is checked (**Yes**), then click **Create user**.
 
 2. **Promote to Owner and Link Tutor Profile**:
    - Open the **SQL Editor** in your Supabase Dashboard.
    - Run the script in [supabase/seed_owner.sql](./supabase/seed_owner.sql):
-     `sql
-     DO 
+     ```sql
+     DO $$
      DECLARE
          target_email TEXT := 'sarahoakhena@gmail.com';
          user_id UUID;
@@ -81,13 +81,62 @@ Because public signups can never create an owner account, Mrs Sarah's administra
              )
              ON CONFLICT (profile_id) DO NOTHING;
          END IF;
-     END ;
-     `
+     END $$;
+     ```
 
 3. **Verify Sign-In**:
-   - Navigate to your deployed app or http://localhost:3000/login.
-   - Log in with sarahoakhena@gmail.com and the password you set.
-   - You will be redirected to Sarah's Owner Administration Hub (/app) with full access to the Student Directory, Milestone Tracking, Resource Library, Enquiry Inbox, Invoices, and Messages.
+   - Navigate to your deployed app or `http://localhost:3000/login`.
+   - Log in with `sarahoakhena@gmail.com` and the password you set.
+   - You will be redirected to Sarah's Owner Administration Hub (`/app`) with full access to the Student Directory, Milestone Tracking, Resource Library, Enquiry Inbox, Invoices, and Messages.
+
+---
+
+## 👨‍👩‍👧 Parent-Child Account Linking Architecture
+
+Mrs Sarah frequently tutors students through word-of-mouth or offline arrangements before parents have self-registered on the platform. The platform handles this transition seamlessly:
+
+1. **Owner Enrolls Learner with Parent Contact**:
+   - Mrs Sarah opens **Student Directory** (`/app/children`) and clicks **Enroll Student**.
+   - She enters the learner's details alongside the **Parent/Guardian Full Name** and **Parent Email Address** (and optional phone number).
+   - If the parent does not yet have an active login account, the child profile is marked with the badge `No portal access yet (Awaiting Signup)`.
+   - Sarah can immediately schedule sessions, update milestones, and record session notes for this learner without restriction.
+
+2. **Automatic Match on Parent Signup**:
+   - When that parent later visits `/signup` and registers with the **matching email address**, `EYTService.claimChildrenByParentEmail(email, userId, name, phone)` is automatically invoked.
+   - The system reassigns the child's `parent_profile_id` to the parent's newly minted account and flags `has_portal_account: true`.
+   - **Zero Duplicates & Zero Re-entry**: The parent immediately sees their child, milestone records, and scheduled lessons upon logging in. No duplicate child records are created.
+   - In Mrs Sarah's Student Directory, the learner's status badge immediately updates to `Portal Active`.
+
+3. **Parent Direct Registration**:
+   - If a new family registers directly on `/signup` without prior tutor enrollment, they can add their children directly in the Parent Portal (`/app/children`) as normal.
+
+---
+
+## 🎯 CTA & Navigation Flow Differentiation
+
+- **High-Intent CTA ("Book a Session")**:
+  - Located on the hero section primary button.
+  - Links to `/signup?intent=booking` for families ready to commit and schedule tutorial slots.
+  - Directs straight to the schedule and booking flow upon registration.
+- **Low-Intent CTA ("Enquire Now")**:
+  - Located in the persistent navigation bar.
+  - Links to `#enquiry` (lightweight public contact form) for visitors who have general questions before booking.
+- **Persistent Header Cleanliness**:
+  - Exactly **ONE** Sign In / Dashboard link exists in the navigation header at all times.
+  - The `(Ages 3–8)` subtitle is removed from the persistent brand mark; the "Mrs Sarah" logo is clean and uncluttered.
+  - The "Localhost Dev" badge is strictly absent in production and positioned as a fixed dev corner tag during local development.
+
+---
+
+## 📱 PWA Features & Single Shared Install Affordance
+
+- **Single Source of Truth (`usePWA`)**:
+  - A single `PWAContext` listens once for `beforeinstallprompt` and retains eligible install state across page transitions and hard refreshes.
+  - Prevents race conditions and duplicate listeners.
+  - Desktop and mobile install buttons consume the same shared state.
+  - If native installation prompt is unsupported (e.g., iOS Safari), the user is provided with a modal guide displaying exact step-by-step instructions.
+- **Web App Manifest**: Configured in `/nextjs/public/manifest.json` with Montessori brand themes, stand-alone display mode, and custom icons.
+- **Service Worker**: Cache-first strategy for static assets and offline fallback in `/nextjs/public/sw.js` and `/nextjs/public/offline.html`.
 
 ---
 
@@ -95,60 +144,51 @@ Because public signups can never create an owner account, Mrs Sarah's administra
 
 | Route | Parent Portal View | Owner Hub (Mrs Sarah) View |
 |---|---|---|
-| / | Public Educator Website | Public Educator Website |
-| /login | Unified Sign In | Unified Sign In |
-| /signup | Parent Account Registration | N/A (Parents only) |
-| /app | Family Dashboard Overview | Tutor Operational Overview |
-| /app/children | My Children (Add/Edit child) | Student Directory (All children) |
-| /app/schedule | Book Session & Upcoming Slots | Schedule, Slots & Calendar |
-| /app/milestones | Child Milestones (Montessori areas) | Milestone Assessment & Tracking |
-| /app/resources | Learning Resources & Downloads | Resource Library & Content Upload |
-| /app/invoices | Invoices, Receipts & Bank Details | Invoices & Manual Payment Records |
-| /app/messages | Message Mrs Sarah directly | Parent Communications Thread |
-| /app/enquiries | N/A | Public Enquiries Inbox & Triage |
+| `/` | Public Educator Website | Public Educator Website |
+| `/login` | Unified Sign In | Unified Sign In |
+| `/signup` | Parent Account Registration | N/A (Parents only) |
+| `/app` | Family Dashboard Overview | Tutor Operational Overview |
+| `/app/children` | My Children (Add/Edit child) | Student Directory (All children) |
+| `/app/schedule` | Book Session & Upcoming Slots | Schedule, Slots & Calendar |
+| `/app/milestones` | Child Milestones (Montessori areas) | Milestone Assessment & Tracking |
+| `/app/resources` | Learning Resources & Downloads | Resource Library & Content Upload |
+| `/app/invoices` | Invoices, Receipts & Bank Details | Invoices & Manual Payment Records |
+| `/app/messages` | Message Mrs Sarah directly | Parent Communications Thread |
+| `/app/enquiries` | N/A | Public Enquiries Inbox & Triage |
 
 ---
 
 ## 🚀 Local Development Setup
 
 1. **Clone the repository**:
-   `ash
+   ```bash
    git clone <repo-url>
    cd EYT-academy/nextjs
-   `
+   ```
 
 2. **Install dependencies**:
-   `ash
+   ```bash
    npm install
-   `
+   ```
 
 3. **Set environment variables**:
-   Create 
-extjs/.env.local:
-   `env
+   Create `nextjs/.env.local`:
+   ```env
    NEXT_PUBLIC_SUPABASE_URL=https://your-supabase-project.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-   `
+   ```
 
 4. **Run migrations**:
    In your Supabase SQL Editor, run:
-   - supabase/migrations/20260904000000_eyt_schema.sql (Creates tables, enums, RLS policies, and Montessori milestone seeds)
-   - supabase/migrations/20260904000001_eyt_storage.sql (Configures resource storage buckets and policies)
-   - supabase/seed_owner.sql (Provisions owner profile)
+   - `supabase/migrations/20260904000000_eyt_schema.sql` (Creates tables, enums, RLS policies, and Montessori milestone seeds)
+   - `supabase/migrations/20260904000001_eyt_storage.sql` (Configures resource storage buckets and policies)
+   - `supabase/seed_owner.sql` (Provisions owner profile)
 
 5. **Start development server**:
-   `ash
+   ```bash
    npm run dev
-   `
+   ```
    Open [http://localhost:3000](http://localhost:3000).
-
----
-
-## 📱 PWA Features & Offline Support
-
-- **Web App Manifest**: Configured in /nextjs/public/manifest.json with Montessori brand themes, stand-alone display mode, and custom icons.
-- **Service Worker**: Cache-first strategy for static assets and offline fallback in /nextjs/public/sw.js and /nextjs/public/offline.html.
-- **Install Prompts**: Automatic iOS installation guide and native eforeinstallprompt support across mobile and desktop browsers.
 
 ---
 

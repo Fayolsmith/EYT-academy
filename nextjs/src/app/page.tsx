@@ -10,7 +10,6 @@ import LearningOptionsSection from '@/components/LearningOptionsSection';
 import TestimonialsSection from '@/components/TestimonialsSection';
 import EnquiryFormSection from '@/components/EnquiryFormSection';
 import Footer from '@/components/Footer';
-import PWAInstallPrompt from '@/components/PWAInstallPrompt';
 
 export default function Home() {
   return (
@@ -31,9 +30,6 @@ export default function Home() {
 
       {/* Footer */}
       <Footer />
-
-      {/* PWA Install Banner */}
-      <PWAInstallPrompt />
     </div>
   );
 }
