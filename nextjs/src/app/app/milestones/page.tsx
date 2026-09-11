@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Award, CheckCircle2, BookOpen, Hash, Scissors, Globe, Palette } from 'lucide-react';
+import { Award, CheckCircle2, BookOpen, Hash, Scissors, Globe, Palette, ArrowRight } from 'lucide-react';
 import { useGlobal } from '@/lib/context/GlobalContext';
 import { EYTService, Milestone, Child, MilestoneStatus } from '@/lib/eyt-service';
 import {
@@ -65,7 +65,7 @@ export default function MilestonesPage() {
     EYTService.updateChildMilestone(selectedChildId, milestoneId, newStatus);
     if (newStatus === 'achieved') {
       setRecentAchievedId(milestoneId);
-      showToast('🌟 Milestone marked Achieved! Developmental milestone recorded.');
+      showToast('Milestone marked Achieved! Developmental milestone recorded.');
       setTimeout(() => setRecentAchievedId(null), 3500);
     } else {
       showToast(`Milestone marked as ${newStatus.replace('_', ' ')}.`);
@@ -100,7 +100,8 @@ export default function MilestonesPage() {
             className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#E8F0FA] text-[#1E4E8C] hover:bg-[#d8e6f7] transition-colors border border-[#1E4E8C]/20 shadow-2xs"
           >
             <BookOpen className="w-3.5 h-3.5 text-[#D4A017]" />
-            <span>{isOwner ? 'Assign & Review Homework →' : 'Home Activities & Homework →'}</span>
+            <span>{isOwner ? 'Assign & Review Homework' : 'Home Activities & Homework'}</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </Link>
 
           {/* Child Selector */}
@@ -335,11 +336,12 @@ export default function MilestonesPage() {
                     </button>
                     <button
                       onClick={() => handleStatusChange(milestone.id, 'achieved')}
-                      className={`px-2 py-1 rounded text-[10px] font-bold ${
+                      className={`px-2 py-1 rounded text-[10px] font-bold inline-flex items-center gap-1 ${
                         currentStatus === 'achieved' ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-800'
                       }`}
                     >
-                      Achieved ✓
+                      <CheckCircle2 className="w-3 h-3" />
+                      <span>Achieved</span>
                     </button>
                   </div>
                 </div>

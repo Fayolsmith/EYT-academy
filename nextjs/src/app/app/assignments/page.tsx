@@ -18,6 +18,8 @@ import {
   AlertCircle,
   Lock,
   Package,
+  X,
+  ZoomIn,
 } from 'lucide-react';
 import { useGlobal } from '@/lib/context/GlobalContext';
 import {
@@ -406,7 +408,7 @@ export default function AssignmentsPage() {
             <span>{successMessage}</span>
           </div>
           <button onClick={() => setSuccessMessage(null)} className="text-emerald-600 hover:text-emerald-900 font-bold ml-2">
-            ✕
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -418,7 +420,7 @@ export default function AssignmentsPage() {
             <span>{errorMessage}</span>
           </div>
           <button onClick={() => setErrorMessage(null)} className="text-rose-600 hover:text-rose-900 font-bold ml-2">
-            ✕
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -629,8 +631,9 @@ export default function AssignmentsPage() {
                                       alt="Homework evidence"
                                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                                     />
-                                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold">
-                                      Enlarge 🔍
+                                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold gap-1">
+                                      <ZoomIn className="w-3 h-3" />
+                                      <span>Enlarge</span>
                                     </div>
                                   </div>
                                 </div>
@@ -677,7 +680,8 @@ export default function AssignmentsPage() {
                       className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#E8F0FA] text-[#1E4E8C] font-bold text-xs hover:bg-[#d8e6f7] transition-all border border-[#1E4E8C]/20 shadow-2xs"
                     >
                       <BookOpen className="w-3.5 h-3.5 text-[#D4A017]" />
-                      <span>Select Student in Directory →</span>
+                      <span>Select Student in Directory</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                   </div>
                 </div>
@@ -1083,7 +1087,7 @@ export default function AssignmentsPage() {
                                     {sub?.milestone_marked_achieved && a.milestone_name && (
                                       <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center gap-2 text-emerald-900 text-xs font-bold">
                                         <Award className="w-4 h-4 text-[#D4A017] shrink-0" />
-                                        <span>Milestone Achieved: {a.milestone_name} 🎉</span>
+                                        <span>Milestone Achieved: {a.milestone_name}</span>
                                       </div>
                                     )}
 
@@ -1135,7 +1139,7 @@ export default function AssignmentsPage() {
               onClick={() => setIsCreateModalOpen(false)}
               className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 cursor-pointer"
             >
-              ✕
+              <X className="w-4 h-4" />
             </button>
           </div>
 
@@ -1192,7 +1196,8 @@ export default function AssignmentsPage() {
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#1E4E8C] text-white font-bold rounded-xl text-xs hover:bg-[#153763] transition-colors"
                     >
                       <BookOpen className="w-3.5 h-3.5 text-[#D4A017]" />
-                      <span>Select Student in Student Directory →</span>
+                      <span>Select Student in Student Directory</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                   </div>
                 )}
@@ -1366,7 +1371,7 @@ export default function AssignmentsPage() {
                 onClick={() => setSubmittingAssignment(null)}
                 className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 cursor-pointer"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -1440,7 +1445,7 @@ export default function AssignmentsPage() {
                         onClick={() => setSubmissionPhotoUrl('')}
                         className="absolute top-1 right-1 bg-black/60 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] cursor-pointer"
                       >
-                        ✕
+                        <X className="w-3 h-3" />
                       </button>
                     </div>
                   )}
@@ -1491,7 +1496,7 @@ export default function AssignmentsPage() {
                 onClick={() => setReviewingAssignment(null)}
                 className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 cursor-pointer"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 

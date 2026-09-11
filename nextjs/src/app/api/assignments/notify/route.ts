@@ -43,7 +43,7 @@ https://mrssarahtutoring.com/app/assignments
 Warm regards,
 Mrs Sarah Oakhena
 Early Years Educator (Montessori Trained | SEN-Inclusive)
-sarahoakhena@gmail.com | 09133651659
+sarahoakhena@gmail.com | WhatsApp: +234 913 365 1659
     `.trim();
 
     console.log(`[ASSIGNMENT NOTIFICATION] Sent to ${payload.recipient_email}: ${emailSubject}`);
