@@ -1,4 +1,9 @@
 import { NextResponse } from 'next/server';
+import {
+  formatDateInTimezone,
+  formatTimeInTimezone,
+  SARAH_TIMEZONE,
+} from '@/lib/i18n-service';
 
 export interface SessionReminderPayload {
   id?: string;
@@ -11,12 +16,17 @@ export interface SessionReminderPayload {
   mode: 'online' | 'home';
   meeting_link?: string | null;
   home_address?: string | null;
+  recipient_timezone?: string | null;
 }
 
 /**
  * POST /api/reminders
  * Dispatches an automated session reminder email to the parent
  * ahead of an upcoming tutorial (e.g. 24 hours prior).
+ *
+ * CRITICAL SPEC REQUIREMENT:
+ * Session times must be stated in the recipient parent's local timezone,
+ * clearly labeled, to prevent international scheduling mismatches.
  */
 export async function POST(req: Request) {
   try {
@@ -29,17 +39,13 @@ export async function POST(req: Request) {
       );
     }
 
-    const sessionDate = new Date(payload.start_time).toLocaleDateString('en-GB', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
+    // Determine recipient's local timezone with fallback
+    const recipientTz = payload.recipient_timezone || 'Europe/London';
 
-    const sessionTime = new Date(payload.start_time).toLocaleTimeString('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    // Format date and time in the recipient parent's local timezone
+    const sessionDate = formatDateInTimezone(payload.start_time, recipientTz, true);
+    const sessionTime = formatTimeInTimezone(payload.start_time, recipientTz, true);
+    const sarahTime = formatTimeInTimezone(payload.start_time, SARAH_TIMEZONE, true);
 
     // Format professional reminder message content
     const emailSubject = `[Lesson Reminder] Upcoming Early Years Tutorial for ${payload.child_name} with Mrs Sarah`;
@@ -50,9 +56,9 @@ This is a friendly automated reminder of your child ${payload.child_name}'s upco
 
 Session Details:
 - Date: ${sessionDate}
-- Time: ${sessionTime}
+- Time: ${sessionTime} (your local time)${recipientTz !== SARAH_TIMEZONE ? ` [Tutor Time: ${sarahTime}]` : ''}
 - Mode: ${payload.mode === 'online' ? 'Online Video Lesson' : 'Home Tutorial'}
-${payload.mode === 'online' ? `- Meeting Link: ${payload.meeting_link || 'https://meet.google.com/sarah-eyt-room'}` : ''}
+${payload.mode === 'online' ? `- Meeting Link: ${payload.meeting_link || 'Meeting link will be shared prior to the session by Mrs Sarah'}` : ''}
 ${payload.mode === 'home' && payload.home_address ? `- Home Address: ${payload.home_address}` : ''}
 
 Important Reminders:
@@ -62,7 +68,7 @@ Important Reminders:
 Warm regards,
 Mrs Sarah Oakhena
 Early Years Educator (Montessori Trained | SEN-Inclusive)
-sarahoakhena@gmail.com | 09133651659
+sarahoakhena@gmail.com | WhatsApp: +234 913 365 1659
     `.trim();
 
     console.log(`[AUTOMATED SESSION REMINDER] Sent to ${payload.recipient_email} for booking ${payload.booking_id}: ${emailSubject}`);

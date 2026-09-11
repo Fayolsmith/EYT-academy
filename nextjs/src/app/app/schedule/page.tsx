@@ -15,7 +15,11 @@ import {
   Bell,
   Trash2,
   ExternalLink,
-  BookOpen
+  BookOpen,
+  Sparkles,
+  Globe,
+  Check,
+  X,
 } from 'lucide-react';
 import { useGlobal } from '@/lib/context/GlobalContext';
 import {
@@ -24,7 +28,17 @@ import {
   Child,
   AvailabilitySlot,
   LessonMode,
-  SessionReminderNotification
+  SessionReminderNotification,
+  SessionType,
+  PricingSettings,
+  SARAH_TIMEZONE,
+  detectUserTimezone,
+  formatDateInTimezone,
+  formatTimeInTimezone,
+  formatDateTimeInTimezone,
+  getTimezoneAbbr,
+  convertLagosTimeToUTC,
+  formatDualTimePreview
 } from '@/lib/eyt-service';
 import { AnimatedModal, Skeleton, useToast } from '@/components/motion';
 
@@ -34,19 +48,22 @@ export default function SchedulePage() {
   const { profile } = useGlobal();
   const { showToast } = useToast();
   const isOwner = profile?.role === 'owner';
+  const userTz = isOwner ? SARAH_TIMEZONE : (profile?.timezone || detectUserTimezone());
+  const tzAbbr = getTimezoneAbbr(userTz);
 
   // Data states
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [reminders, setReminders] = useState<SessionReminderNotification[]>([]);
+  const [pricingSettings, setPricingSettings] = useState<PricingSettings>(() =>
+    EYTService.getPricingSettings()
+  );
   const [isLoading, setIsLoading] = useState(true);
 
-  // Active view tab
+  // Tab & Filter state
   const [activeTab, setActiveTab] = useState<ActiveScheduleTab>('upcoming');
   const [selectedChildFilter, setSelectedChildFilter] = useState<string>('all');
-
-  // Status feedback
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -59,6 +76,7 @@ export default function SchedulePage() {
 
   // 1. Book Modal Form State
   const [bookChildId, setBookChildId] = useState('');
+  const [bookSessionType, setBookSessionType] = useState<SessionType>('standard');
   const [bookMode, setBookMode] = useState<LessonMode>('online');
   const [isRecurring, setIsRecurring] = useState(false);
   const [weeksCount, setWeeksCount] = useState(4);
@@ -71,7 +89,7 @@ export default function SchedulePage() {
   const [customDurationMin, setCustomDurationMin] = useState(60);
   const [bookHomeAddress, setBookHomeAddress] = useState('');
   const [bookNotes, setBookNotes] = useState('');
-  const [customMeetingLink, setCustomMeetingLink] = useState('https://meet.google.com/sarah-eyt-room');
+  const [customMeetingLink, setCustomMeetingLink] = useState('');
 
   // 2. Attendance Modal Form State
   const [attendanceStatus, setAttendanceStatus] = useState<'completed' | 'no_show' | 'cancelled'>('completed');
@@ -114,6 +132,7 @@ export default function SchedulePage() {
     setSlots(EYTService.getSlots());
     setChildren(isOwner ? EYTService.getChildren() : EYTService.getChildren(profile?.id));
     setReminders(EYTService.getReminderNotifications());
+    setPricingSettings(EYTService.getPricingSettings());
     setIsLoading(false);
   }, [isOwner, profile?.id]);
 
@@ -141,11 +160,11 @@ export default function SchedulePage() {
   });
 
   const upcomingBookings = filteredBookings.filter(
-    (b) => b.status === 'confirmed' || b.status === 'pending'
+    (b) => b.status === 'confirmed' && new Date(b.start_time) >= new Date()
   );
 
   const historyBookings = filteredBookings.filter(
-    (b) => b.status === 'completed' || b.status === 'no_show' || b.status === 'cancelled'
+    (b) => b.status !== 'confirmed' || new Date(b.start_time) < new Date()
   );
 
   // ------------------------------------------------
@@ -162,7 +181,7 @@ export default function SchedulePage() {
   const handleCreateBookingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!bookChildId) {
-      showError('Please select a child for this session.');
+      showError('Please select an enrolled child profile.');
       return;
     }
 
@@ -171,27 +190,40 @@ export default function SchedulePage() {
     let usedSlotId: string | undefined = undefined;
 
     if (selectedSlotId !== 'custom') {
-      const slot = slots.find((s) => s.id === selectedSlotId);
-      if (!slot) {
+      const foundSlot = slots.find((s) => s.id === selectedSlotId);
+      if (!foundSlot) {
         showError('Selected slot is no longer available.');
         return;
       }
-      startIso = slot.start_time;
-      endIso = slot.end_time;
-      usedSlotId = slot.id;
+      startIso = foundSlot.start_time;
+      endIso = foundSlot.end_time;
+      usedSlotId = foundSlot.id;
     } else {
-      const startDate = new Date(`${customDate}T${customStartTime}:00`);
-      if (isNaN(startDate.getTime())) {
-        showError('Please select a valid date and time.');
-        return;
+      if (isOwner) {
+        startIso = convertLagosTimeToUTC(customDate, customStartTime);
+        const startDate = new Date(startIso);
+        endIso = new Date(startDate.getTime() + customDurationMin * 60 * 1000).toISOString();
+      } else {
+        const startDate = new Date(`${customDate}T${customStartTime}:00`);
+        if (isNaN(startDate.getTime())) {
+          showError('Please select a valid date and time.');
+          return;
+        }
+        const endDate = new Date(startDate.getTime() + customDurationMin * 60 * 1000);
+        startIso = startDate.toISOString();
+        endIso = endDate.toISOString();
       }
-      const endDate = new Date(startDate.getTime() + customDurationMin * 60 * 1000);
-      startIso = startDate.toISOString();
-      endIso = endDate.toISOString();
     }
 
     try {
-      if (isRecurring) {
+      if (bookSessionType === 'trial') {
+        if (EYTService.hasChildBookedTrial(bookChildId)) {
+          showError('Only one trial session is permitted per child or family. This child has already booked or completed a trial session.');
+          return;
+        }
+      }
+
+      if (isRecurring && bookSessionType !== 'trial') {
         // Phase 2 Scope 1: Recurring weekly session booking
         const created = EYTService.createRecurringBooking({
           slotId: usedSlotId,
@@ -203,10 +235,11 @@ export default function SchedulePage() {
           homeAddress: bookMode === 'home' ? bookHomeAddress : undefined,
           notes: bookNotes.trim() || undefined,
           meetingLink: bookMode === 'online' ? customMeetingLink : undefined,
+          parentTimezone: userTz,
         });
         showSuccess(`Successfully scheduled recurring weekly series (${created.length} individual sessions created).`);
       } else {
-        // One-off session booking
+        // One-off session booking (Standard or Trial)
         EYTService.createBooking({
           slotId: usedSlotId,
           childId: bookChildId,
@@ -216,11 +249,19 @@ export default function SchedulePage() {
           homeAddress: bookMode === 'home' ? bookHomeAddress : undefined,
           notes: bookNotes.trim() || undefined,
           meetingLink: bookMode === 'online' ? customMeetingLink : undefined,
+          sessionType: bookSessionType,
+          trialPrice: bookSessionType === 'trial' ? pricingSettings.trial_session_price : undefined,
+          parentTimezone: userTz,
         });
-        showSuccess('Tutorial session confirmed and scheduled successfully.');
+        showSuccess(
+          bookSessionType === 'trial'
+            ? 'Diagnostic Trial Session booked and scheduled successfully!'
+            : 'Tutorial session confirmed and scheduled successfully.'
+        );
       }
 
       setIsBookModalOpen(false);
+      setBookSessionType('standard');
       loadAllData();
       // Trigger automated reminders check for new booking
       EYTService.checkAndDispatchReminders(48);
@@ -253,16 +294,23 @@ export default function SchedulePage() {
     if (!rescheduleBooking) return;
 
     try {
-      const newStart = new Date(`${rescheduleDate}T${rescheduleTime}:00`);
-      if (isNaN(newStart.getTime())) {
-        showError('Please choose a valid reschedule date and time.');
-        return;
+      let newStartIso: string;
+      if (isOwner) {
+        newStartIso = convertLagosTimeToUTC(rescheduleDate, rescheduleTime);
+      } else {
+        const newStart = new Date(`${rescheduleDate}T${rescheduleTime}:00`);
+        if (isNaN(newStart.getTime())) {
+          showError('Please choose a valid reschedule date and time.');
+          return;
+        }
+        newStartIso = newStart.toISOString();
       }
+
       const durationMs =
         new Date(rescheduleBooking.end_time).getTime() - new Date(rescheduleBooking.start_time).getTime();
-      const newEnd = new Date(newStart.getTime() + durationMs);
+      const newEndIso = new Date(new Date(newStartIso).getTime() + durationMs).toISOString();
 
-      EYTService.rescheduleBooking(rescheduleBooking.id, newStart.toISOString(), newEnd.toISOString());
+      EYTService.rescheduleBooking(rescheduleBooking.id, newStartIso, newEndIso);
       showSuccess(
         rescheduleBooking.is_recurring
           ? 'Occurrence rescheduled successfully without altering the rest of the recurring series.'
@@ -300,8 +348,8 @@ export default function SchedulePage() {
   const handleAddSlotSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const startIso = new Date(`${newSlotDate}T${newSlotStartTime}:00`).toISOString();
-      const endIso = new Date(`${newSlotDate}T${newSlotEndTime}:00`).toISOString();
+      const startIso = convertLagosTimeToUTC(newSlotDate, newSlotStartTime);
+      const endIso = convertLagosTimeToUTC(newSlotDate, newSlotEndTime);
 
       EYTService.addSlot({
         tutor_id: 'tutor-sarah-id',
@@ -310,7 +358,7 @@ export default function SchedulePage() {
         mode: newSlotMode,
       });
 
-      showSuccess('Teaching availability slot added successfully.');
+      showSuccess('Teaching availability slot added successfully (stored in UTC).');
       setIsAddSlotModalOpen(false);
       loadAllData();
     } catch (err) {
@@ -352,6 +400,14 @@ export default function SchedulePage() {
               ? 'Configure teaching availability, book recurring series, track attendance, and manage session records.'
               : 'Book one-off or recurring weekly sessions, access live lesson links, and review session history.'}
           </p>
+          <div className="mt-2.5 flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E8F0FA] text-[#1E4E8C] text-[11px] font-semibold border border-blue-100">
+              <Globe className="w-3.5 h-3.5 text-[#D4A017]" />
+              {isOwner
+                ? 'Mrs Sarah’s Lagos Timezone: WAT (UTC+1)'
+                : `Times shown in your local timezone: ${tzAbbr} (${userTz})`}
+            </span>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -503,9 +559,6 @@ export default function SchedulePage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {upcomingBookings.map((booking) => {
-                const startDate = new Date(booking.start_time);
-                const endDate = new Date(booking.end_time);
-
                 return (
                   <div
                     key={booking.id}
@@ -526,7 +579,7 @@ export default function SchedulePage() {
                           </div>
 
                           <h3 className="font-heading text-lg font-bold text-[#14263F] mt-1">
-                            {startDate.toLocaleDateString('en-GB', {
+                            {formatDateInTimezone(booking.start_time, userTz, {
                               weekday: 'long',
                               day: 'numeric',
                               month: 'long',
@@ -537,13 +590,38 @@ export default function SchedulePage() {
                           <div className="flex items-center gap-2 text-xs text-[#6B7280] mt-1">
                             <Clock className="w-3.5 h-3.5 text-[#D4A017]" />
                             <span>
-                              {startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -{' '}
-                              {endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {formatTimeInTimezone(booking.start_time, userTz)} -{' '}
+                              {formatTimeInTimezone(booking.end_time, userTz)} ({tzAbbr})
                             </span>
                           </div>
+
+                          {/* International Timezone Subtitles */}
+                          {userTz !== SARAH_TIMEZONE && (
+                            <div className="text-[10px] text-[#6B7280] mt-0.5 flex items-center gap-1">
+                              <Globe className="w-3 h-3 text-[#D4A017]" />
+                              <span>
+                                Mrs Sarah’s Lagos Time: {formatTimeInTimezone(booking.start_time, SARAH_TIMEZONE)} WAT
+                              </span>
+                            </div>
+                          )}
+                          {isOwner && booking.parent_timezone && booking.parent_timezone !== SARAH_TIMEZONE && (
+                            <div className="text-[10px] text-[#1E4E8C] mt-0.5 flex items-center gap-1">
+                              <Globe className="w-3 h-3 text-[#D4A017]" />
+                              <span>
+                                Family Local Time: {formatTimeInTimezone(booking.start_time, booking.parent_timezone)} ({getTimezoneAbbr(booking.parent_timezone)})
+                              </span>
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex flex-col items-end gap-1.5 shrink-0">
+                          {booking.session_type === 'trial' && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <Sparkles className="w-3 h-3 text-emerald-600" />
+                              Trial Session
+                            </span>
+                          )}
+
                           <span
                             className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase ${
                               booking.mode === 'online'
@@ -606,16 +684,23 @@ export default function SchedulePage() {
                         )}
 
                         {/* Join Call button if online */}
-                        {booking.meeting_link && booking.mode === 'online' && (
-                          <a
-                            href={booking.meeting_link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1E4E8C] text-white font-bold hover:bg-[#153763] transition-colors shadow-2xs"
-                          >
-                            <Video className="w-3.5 h-3.5 text-[#D4A017]" />
-                            Join Video Call
-                          </a>
+                        {booking.mode === 'online' && (
+                          booking.meeting_link ? (
+                            <a
+                              href={booking.meeting_link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1E4E8C] text-white font-bold hover:bg-[#153763] transition-colors shadow-2xs"
+                            >
+                              <Video className="w-3.5 h-3.5 text-[#D4A017]" />
+                              Join Video Call
+                            </a>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 text-gray-500 text-[11px] font-medium">
+                              <Video className="w-3 h-3 text-gray-400" />
+                              Meeting link not yet provided
+                            </span>
+                          )
                         )}
                       </div>
 
@@ -624,14 +709,21 @@ export default function SchedulePage() {
                         <button
                           onClick={() => {
                             setRescheduleBooking(booking);
-                            setRescheduleDate(new Date(booking.start_time).toISOString().split('T')[0]);
-                            setRescheduleTime(
-                              new Date(booking.start_time).toLocaleTimeString([], {
+                            try {
+                              const d = new Date(booking.start_time);
+                              const ymd = new Intl.DateTimeFormat('en-CA', { timeZone: userTz }).format(d);
+                              const hm = new Intl.DateTimeFormat('en-GB', {
+                                timeZone: userTz,
                                 hour: '2-digit',
                                 minute: '2-digit',
                                 hour12: false,
-                              })
-                            );
+                              }).format(d);
+                              setRescheduleDate(ymd);
+                              setRescheduleTime(hm);
+                            } catch {
+                              setRescheduleDate(new Date(booking.start_time).toISOString().split('T')[0]);
+                              setRescheduleTime('16:00');
+                            }
                           }}
                           className="px-2.5 py-1 rounded-lg border border-gray-200 text-[#14263F] font-semibold text-[11px] hover:bg-gray-50 transition-colors"
                         >
@@ -714,14 +806,14 @@ export default function SchedulePage() {
                       <tr key={b.id} className="hover:bg-gray-50/80 transition-colors">
                         <td className="p-4">
                           <div className="font-bold text-[#14263F]">
-                            {new Date(b.start_time).toLocaleDateString('en-GB', {
+                            {formatDateInTimezone(b.start_time, userTz, {
                               day: 'numeric',
                               month: 'short',
                               year: 'numeric',
                             })}
                           </div>
                           <div className="text-[11px] text-[#6B7280]">
-                            {new Date(b.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {formatTimeInTimezone(b.start_time, userTz)} ({tzAbbr})
                           </div>
                         </td>
 
@@ -736,20 +828,31 @@ export default function SchedulePage() {
                           <span className="uppercase text-[10px] font-bold text-[#D4A017] block">
                             {b.mode === 'online' ? 'Online' : 'Home'}
                           </span>
-                          {b.mode === 'online' && b.meeting_link && (
-                            <a
-                              href={b.meeting_link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[10px] text-[#1E4E8C] hover:underline flex items-center gap-1 mt-0.5"
-                            >
-                              Meeting Link <ExternalLink className="w-2.5 h-2.5" />
-                            </a>
+                          {b.mode === 'online' && (
+                            b.meeting_link ? (
+                              <a
+                                href={b.meeting_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] text-[#1E4E8C] hover:underline flex items-center gap-1 mt-0.5"
+                              >
+                                Meeting Link <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
+                            ) : (
+                              <span className="text-[10px] text-gray-400 italic block mt-0.5">
+                                Link pending
+                              </span>
+                            )
                           )}
                         </td>
 
                         <td className="p-4">
-                          {b.is_recurring ? (
+                          {b.session_type === 'trial' ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <Sparkles className="w-3 h-3 text-emerald-600" />
+                              Trial Session
+                            </span>
+                          ) : b.is_recurring ? (
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700">
                               <Repeat className="w-3 h-3" />
                               Week {b.recurrence_index || 1} of {b.recurrence_total || 4}
@@ -790,8 +893,9 @@ export default function SchedulePage() {
 
                         <td className="p-4">
                           {b.is_billable ? (
-                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                              Billable ✓
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 inline-flex items-center gap-1">
+                              <Check className="w-3 h-3 text-emerald-600" />
+                              <span>Billable</span>
                             </span>
                           ) : (
                             <span className="text-[10px] font-semibold text-gray-500 bg-gray-50 px-2 py-0.5 rounded-md">
@@ -859,9 +963,6 @@ export default function SchedulePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {slots.map((slot) => {
-              const start = new Date(slot.start_time);
-              const end = new Date(slot.end_time);
-
               return (
                 <div
                   key={slot.id}
@@ -886,7 +987,7 @@ export default function SchedulePage() {
                     </div>
 
                     <h4 className="font-heading font-bold text-base text-[#14263F]">
-                      {start.toLocaleDateString('en-GB', {
+                      {formatDateInTimezone(slot.start_time, userTz, {
                         weekday: 'short',
                         day: 'numeric',
                         month: 'short',
@@ -896,10 +997,17 @@ export default function SchedulePage() {
                     <div className="text-xs text-[#6B7280] flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5 text-[#D4A017]" />
                       <span>
-                        {start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -{' '}
-                        {end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {formatTimeInTimezone(slot.start_time, userTz)} -{' '}
+                        {formatTimeInTimezone(slot.end_time, userTz)} ({tzAbbr})
                       </span>
                     </div>
+
+                    {userTz !== SARAH_TIMEZONE && (
+                      <div className="text-[10px] text-[#6B7280] flex items-center gap-1 pt-0.5">
+                        <Globe className="w-3 h-3 text-[#D4A017]" />
+                        <span>Mrs Sarah’s Time: {formatTimeInTimezone(slot.start_time, SARAH_TIMEZONE)} WAT</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
@@ -983,26 +1091,35 @@ export default function SchedulePage() {
                     {reminders.map((r) => (
                       <tr key={r.id} className="hover:bg-gray-50/80 transition-colors">
                         <td className="p-4 font-mono text-[11px] text-[#6B7280]">
-                          {new Date(r.sent_at).toLocaleDateString('en-GB')} {new Date(r.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {formatDateTimeInTimezone(r.sent_at, SARAH_TIMEZONE)} WAT
                         </td>
                         <td className="p-4">
                           <div className="font-bold text-[#14263F]">{r.recipient_name}</div>
                           <div className="text-[11px] text-[#6B7280]">{r.recipient_email}</div>
+                          {r.recipient_timezone && (
+                            <span className="text-[10px] text-blue-600">({r.recipient_timezone})</span>
+                          )}
                         </td>
                         <td className="p-4 font-bold text-[#1E4E8C]">
                           {r.child_name}
                         </td>
                         <td className="p-4">
                           <div>
-                            {new Date(r.start_time).toLocaleDateString('en-GB', {
+                            {formatDateInTimezone(r.start_time, SARAH_TIMEZONE, {
                               weekday: 'short',
                               day: 'numeric',
                               month: 'short',
                             })}
                           </div>
                           <div className="text-[11px] text-[#6B7280]">
-                            {new Date(r.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {formatTimeInTimezone(r.start_time, SARAH_TIMEZONE)} WAT
                           </div>
+                          {r.recipient_timezone && r.recipient_timezone !== SARAH_TIMEZONE && (
+                            <div className="text-[10px] text-[#1E4E8C] mt-0.5 flex items-center gap-1">
+                              <Globe className="w-2.5 h-2.5 text-[#D4A017]" />
+                              <span>Parent: {formatTimeInTimezone(r.start_time, r.recipient_timezone)} {getTimezoneAbbr(r.recipient_timezone)}</span>
+                            </div>
+                          )}
                         </td>
                         <td className="p-4">
                           <span className="uppercase text-[10px] font-bold text-[#D4A017] block">
@@ -1052,7 +1169,7 @@ export default function SchedulePage() {
               onClick={() => setIsBookModalOpen(false)}
               className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
             >
-              ✕
+              <X className="w-4 h-4" />
             </button>
           </div>
 
@@ -1075,6 +1192,64 @@ export default function SchedulePage() {
                   ))}
                 </select>
               </div>
+
+              {/* Session Type (Standard vs Trial) */}
+              {(pricingSettings.trial_session_enabled || isOwner) && (
+                <div>
+                  <label className="block font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                    Session Type *
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setBookSessionType('standard')}
+                      className={`py-2 px-3 rounded-xl font-bold flex items-center justify-center gap-2 border transition-all ${
+                        bookSessionType === 'standard'
+                          ? 'bg-[#1E4E8C] text-white border-[#1E4E8C] shadow-xs'
+                          : 'bg-white text-[#14263F] border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <BookOpen className="w-3.5 h-3.5 text-[#D4A017]" />
+                      Standard Session
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBookSessionType('trial');
+                        setIsRecurring(false);
+                      }}
+                      className={`py-2 px-3 rounded-xl font-bold flex items-center justify-center gap-2 border transition-all ${
+                        bookSessionType === 'trial'
+                          ? 'bg-emerald-700 text-white border-emerald-700 shadow-xs'
+                          : 'bg-white text-[#14263F] border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                      Trial Session {pricingSettings.trial_session_price === 0 ? '(Free)' : `(₦${Number(pricingSettings.trial_session_price).toLocaleString()})`}
+                    </button>
+                  </div>
+
+                  {/* 1-Trial Limit Warning */}
+                  {bookSessionType === 'trial' && EYTService.hasChildBookedTrial(bookChildId) && (
+                    <div className="mt-2 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11px] flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <strong>Trial session limit reached:</strong> This child / family has already scheduled or completed a trial session. Strictly 1 trial session allowed per family. Please choose <strong>Standard Session</strong> to book.
+                      </div>
+                    </div>
+                  )}
+
+                  {bookSessionType === 'trial' && !EYTService.hasChildBookedTrial(bookChildId) && (
+                    <div className="mt-2 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>
+                        Trial Session eligible! {pricingSettings.trial_session_price === 0 ? 'This session is complimentary (₦0).' : `Billed at introductory rate of ₦${Number(pricingSettings.trial_session_price).toLocaleString()}.`}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Mode Selection */}
               <div>
@@ -1137,97 +1312,174 @@ export default function SchedulePage() {
                     type="url"
                     value={customMeetingLink}
                     onChange={(e) => setCustomMeetingLink(e.target.value)}
-                    placeholder="https://meet.google.com/sarah-eyt-room"
+                    placeholder="e.g. https://meet.google.com/abc-defg-hij (optional)"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs focus:ring-2 focus:ring-[#1E4E8C] outline-none"
                   />
                 </div>
               )}
 
-              {/* RECURRING TOGGLE (Phase 2 Scope 1) */}
-              <div className="p-4 rounded-2xl bg-[#FCFBF7] border border-[#F3E7C4] space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Repeat className="w-4 h-4 text-[#D4A017]" />
-                    <span className="font-bold text-[#14263F]">Repeat Booking (Weekly Recurring Slot)</span>
+              {/* RECURRING TOGGLE (Phase 2 Scope 1) - Only for standard sessions */}
+              {bookSessionType !== 'trial' && (
+                <div className="p-4 rounded-2xl bg-[#FCFBF7] border border-[#F3E7C4] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Repeat className="w-4 h-4 text-[#D4A017]" />
+                      <span className="font-bold text-[#14263F]">Repeat Booking (Weekly Recurring Slot)</span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={isRecurring}
+                      onChange={(e) => setIsRecurring(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-[#1E4E8C] focus:ring-[#1E4E8C]"
+                    />
                   </div>
-                  <input
-                    type="checkbox"
-                    checked={isRecurring}
-                    onChange={(e) => setIsRecurring(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-[#1E4E8C] focus:ring-[#1E4E8C]"
-                  />
+
+                  <p className="text-[11px] text-[#6B7280] leading-relaxed">
+                    Book this weekly time slot on an ongoing basis. This creates <strong>individual session records</strong> under the hood, so each week can still be individually rescheduled, cancelled, or marked attended.
+                  </p>
+
+                  {isRecurring && (
+                    <div className="pt-2 flex items-center gap-3">
+                      <span className="font-semibold text-[#14263F]">Duration:</span>
+                      {[4, 8, 12].map((w) => (
+                        <button
+                          key={w}
+                          type="button"
+                          onClick={() => setWeeksCount(w)}
+                          className={`px-3 py-1 rounded-lg font-bold text-[11px] transition-all ${
+                            weeksCount === w
+                              ? 'bg-[#1E4E8C] text-white'
+                              : 'bg-white text-[#14263F] border border-gray-200 hover:bg-gray-50'
+                          }`}
+                        >
+                          {w} Weeks
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
+              )}
 
-                <p className="text-[11px] text-[#6B7280] leading-relaxed">
-                  Book this weekly time slot on an ongoing basis. This creates <strong>individual session records</strong> under the hood, so each week can still be individually rescheduled, cancelled, or marked attended.
-                </p>
-
-                {isRecurring && (
-                  <div className="pt-2 flex items-center gap-3">
-                    <span className="font-semibold text-[#14263F]">Duration:</span>
-                    {[4, 8, 12].map((w) => (
-                      <button
-                        key={w}
-                        type="button"
-                        onClick={() => setWeeksCount(w)}
-                        className={`px-3 py-1 rounded-lg font-bold text-[11px] transition-all ${
-                          weeksCount === w
-                            ? 'bg-[#1E4E8C] text-white'
-                            : 'bg-white text-[#14263F] border border-gray-200 hover:bg-gray-50'
-                        }`}
-                      >
-                        {w} Weeks
-                      </button>
+              {/* Slot Selector: Choose from open slots or Custom */}
+              <div>
+                <label className="block font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                  Availability Slot
+                </label>
+                <select
+                  value={selectedSlotId}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedSlotId(val);
+                    if (val !== 'custom') {
+                      const s = slots.find((item) => item.id === val);
+                      if (s) {
+                        setBookMode(s.mode === 'home' ? 'home' : 'online');
+                      }
+                    }
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#14263F] focus:ring-2 focus:ring-[#1E4E8C] outline-none"
+                >
+                  <option value="custom">-- Custom Date & Time --</option>
+                  {slots
+                    .filter((s) => !s.is_booked || s.id === selectedSlotId)
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {formatDateInTimezone(s.start_time, userTz, {
+                          weekday: 'short',
+                          day: 'numeric',
+                          month: 'short',
+                        })}{' '}
+                        at {formatTimeInTimezone(s.start_time, userTz)} ({tzAbbr}) •{' '}
+                        {s.mode === 'both' ? 'Online / Home' : s.mode === 'online' ? 'Online' : 'Home'}
+                      </option>
                     ))}
-                  </div>
-                )}
+                </select>
               </div>
 
-              {/* Date & Time Selection */}
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-bold text-[#14263F] uppercase tracking-wider mb-1">
-                      {isRecurring ? 'First Session Date *' : 'Session Date *'}
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={customDate}
-                      onChange={(e) => setCustomDate(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#14263F] focus:ring-2 focus:ring-[#1E4E8C] outline-none"
-                    />
+              {/* Dual-Time Preview when an existing slot is selected */}
+              {selectedSlotId !== 'custom' && (() => {
+                const s = slots.find((item) => item.id === selectedSlotId);
+                if (!s) return null;
+                const dual = formatDualTimePreview(s.start_time, userTz);
+                return (
+                  <div className="p-3.5 rounded-2xl bg-[#F3F7FD] border border-[#C7DAF3] space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-[#1E4E8C] flex items-center gap-1.5">
+                        <Globe className="w-3.5 h-3.5 text-[#D4A017]" />
+                        Timezone Schedule Preview
+                      </span>
+                      <span className="text-[10px] text-gray-400 font-mono">UTC: {new Date(s.start_time).toISOString().substring(11, 16)}Z</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="bg-white p-2.5 rounded-xl border border-blue-100">
+                        <span className="text-[10px] text-[#6B7280] block font-bold uppercase">Mrs Sarah’s Time</span>
+                        <span className="font-bold text-[#14263F] text-sm">{dual.sarahTime}</span>
+                        <span className="text-[10px] text-gray-400 block">WAT (Lagos, UTC+1)</span>
+                      </div>
+                      <div className="bg-white p-2.5 rounded-xl border border-emerald-200">
+                        <span className="text-[10px] text-emerald-700 block font-bold uppercase">In Your Local Time</span>
+                        <span className="font-bold text-emerald-900 text-sm">{dual.parentTime}</span>
+                        <span className="text-[10px] text-emerald-600 block">{userTz} ({tzAbbr})</span>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-[#4A5568] italic">{dual.explanation}</p>
+                  </div>
+                );
+              })()}
+
+              {/* Date & Time Selection (for Custom) */}
+              {selectedSlotId === 'custom' && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                        {isRecurring ? 'First Session Date *' : 'Session Date *'}
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={customDate}
+                        onChange={(e) => setCustomDate(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#14263F] focus:ring-2 focus:ring-[#1E4E8C] outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                        Start Time ({tzAbbr}) *
+                      </label>
+                      <input
+                        type="time"
+                        required
+                        value={customStartTime}
+                        onChange={(e) => setCustomStartTime(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#14263F] focus:ring-2 focus:ring-[#1E4E8C] outline-none"
+                      />
+                    </div>
                   </div>
 
                   <div>
                     <label className="block font-bold text-[#14263F] uppercase tracking-wider mb-1">
-                      Start Time *
+                      Duration (Minutes)
                     </label>
-                    <input
-                      type="time"
-                      required
-                      value={customStartTime}
-                      onChange={(e) => setCustomStartTime(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-[#14263F] focus:ring-2 focus:ring-[#1E4E8C] outline-none"
-                    />
+                    <select
+                      value={customDurationMin}
+                      onChange={(e) => setCustomDurationMin(parseInt(e.target.value))}
+                      className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-xs font-bold text-[#14263F] focus:ring-2 focus:ring-[#1E4E8C] outline-none"
+                    >
+                      <option value={45}>45 Minutes (Early Montessori)</option>
+                      <option value={60}>60 Minutes (Standard Tutorial)</option>
+                      <option value={90}>90 Minutes (Intensive / Primary Transition)</option>
+                    </select>
                   </div>
-                </div>
 
-                <div>
-                  <label className="block font-bold text-[#14263F] uppercase tracking-wider mb-1">
-                    Duration (Minutes)
-                  </label>
-                  <select
-                    value={customDurationMin}
-                    onChange={(e) => setCustomDurationMin(parseInt(e.target.value))}
-                    className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-xs font-bold text-[#14263F] focus:ring-2 focus:ring-[#1E4E8C] outline-none"
-                  >
-                    <option value={45}>45 Minutes (Early Montessori)</option>
-                    <option value={60}>60 Minutes (Standard Tutorial)</option>
-                    <option value={90}>90 Minutes (Intensive / Primary Transition)</option>
-                  </select>
+                  <p className="text-[11px] text-[#6B7280]">
+                    {isOwner
+                      ? 'Times are configured in Lagos time (WAT • UTC+1).'
+                      : `Entered in your local timezone (${tzAbbr}). Will be stored in UTC internally.`}
+                  </p>
                 </div>
-              </div>
+              )}
 
               {/* Notes */}
               <div>
@@ -1254,9 +1506,20 @@ export default function SchedulePage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-[#1E4E8C] text-white font-bold text-xs hover:bg-[#153763] transition-all shadow-xs"
+                  disabled={bookSessionType === 'trial' && EYTService.hasChildBookedTrial(bookChildId)}
+                  className={`px-5 py-2.5 rounded-xl text-white font-bold text-xs transition-all shadow-xs ${
+                    bookSessionType === 'trial' && EYTService.hasChildBookedTrial(bookChildId)
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : bookSessionType === 'trial'
+                      ? 'bg-emerald-600 hover:bg-emerald-700'
+                      : 'bg-[#1E4E8C] hover:bg-[#153763]'
+                  }`}
                 >
-                  {isRecurring ? `Confirm ${weeksCount}-Week Recurring Series` : 'Confirm Booking'}
+                  {bookSessionType === 'trial'
+                    ? 'Confirm Diagnostic Trial Session'
+                    : isRecurring
+                    ? `Confirm ${weeksCount}-Week Recurring Series`
+                    : 'Confirm Booking'}
                 </button>
               </div>
             </form>
@@ -1280,7 +1543,7 @@ export default function SchedulePage() {
                 </h3>
                 <p className="text-xs text-[#6B7280]">
                   {attendanceBooking.child_name} •{' '}
-                  {new Date(attendanceBooking.start_time).toLocaleDateString('en-GB', {
+                  {formatDateInTimezone(attendanceBooking.start_time, userTz, {
                     day: 'numeric',
                     month: 'short',
                   })}
@@ -1290,7 +1553,7 @@ export default function SchedulePage() {
                 onClick={() => setAttendanceBooking(null)}
                 className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -1451,7 +1714,7 @@ export default function SchedulePage() {
                 onClick={() => setRescheduleBooking(null)}
                 className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -1526,7 +1789,7 @@ export default function SchedulePage() {
                 </h3>
                 <p className="text-xs text-[#6B7280]">
                   {cancelBookingTarget.child_name} •{' '}
-                  {new Date(cancelBookingTarget.start_time).toLocaleDateString('en-GB', {
+                  {formatDateInTimezone(cancelBookingTarget.start_time, userTz, {
                     day: 'numeric',
                     month: 'short',
                   })}
@@ -1536,7 +1799,7 @@ export default function SchedulePage() {
                 onClick={() => setCancelBookingTarget(null)}
                 className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -1596,21 +1859,21 @@ export default function SchedulePage() {
                   Add Teaching Availability Slot
                 </h3>
                 <p className="text-xs text-[#6B7280]">
-                  Define hours when you are available for online or home tutoring.
+                  Define hours in Mrs Sarah’s Lagos time (WAT • UTC+1). Slots are stored in UTC internally and automatically converted for international parents.
                 </p>
               </div>
               <button
                 onClick={() => setIsAddSlotModalOpen(false)}
                 className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleAddSlotSubmit} className="space-y-4 text-xs">
               <div>
                 <label className="block font-bold text-[#14263F] uppercase tracking-wider mb-1">
-                  Date *
+                  Date (WAT Lagos) *
                 </label>
                 <input
                   type="date"
@@ -1624,7 +1887,7 @@ export default function SchedulePage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-[#14263F] uppercase tracking-wider mb-1">
-                    Start Time *
+                    Start Time (WAT) *
                   </label>
                   <input
                     type="time"
@@ -1637,7 +1900,7 @@ export default function SchedulePage() {
 
                 <div>
                   <label className="block font-bold text-[#14263F] uppercase tracking-wider mb-1">
-                    End Time *
+                    End Time (WAT) *
                   </label>
                   <input
                     type="time"
