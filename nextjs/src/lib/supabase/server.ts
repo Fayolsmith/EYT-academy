@@ -3,8 +3,8 @@ import { cookies } from 'next/headers'
 import { ClientType, SassClient } from "@/lib/supabase/unified";
 import { Database } from "@/lib/types";
 
-const defaultUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://hcxhxxihtjshyjaoxoqh.supabase.co';
-const defaultKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhjeGh4eGlodGpzaHlqYW94b3FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2MjA3ODEsImV4cCI6MjEwNDE5Njc4MX0.wAbrPNvT-DzMDOB3JSB5hHt_LnPIiilRVqadff4Zor4';
+const defaultUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const defaultKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 export async function createSSRClient() {
     const cookieStore = await cookies()

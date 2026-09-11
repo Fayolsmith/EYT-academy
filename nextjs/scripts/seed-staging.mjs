@@ -1,7 +1,21 @@
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://hcxhxxihtjshyjaoxoqh.supabase.co';
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhjeGh4eGlodGpzaHlqYW94b3FoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4ODYyMDc4MSwiZXhwIjoyMTA0MTk2NzgxfQ.PDf_gM4yhTg1ixyA5uK6z-wVpOB4S3LwLQ_yMboG8vA';
+// Load .env.local if present
+try {
+  if (typeof process.loadEnvFile === 'function') {
+    process.loadEnvFile('.env.local');
+  }
+} catch {
+  // Ignore if file doesn't exist or already loaded
+}
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.PRIVATE_SUPABASE_SERVICE_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('[SECURITY ERROR]: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in your .env.local or environment.');
+  process.exit(1);
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: {
