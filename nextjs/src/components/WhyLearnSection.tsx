@@ -2,7 +2,9 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Star, Zap, Sparkles, HeartHandshake, Smile, TrendingUp } from 'lucide-react';
+import { STOCK_IMAGERY } from '@/lib/stock-imagery';
 
 export default function WhyLearnSection() {
   const reasons = [
@@ -63,6 +65,40 @@ export default function WhyLearnSection() {
               <p className="text-xs sm:text-sm text-[#6B7280] leading-relaxed">
                 Noticeable improvement within 3–4 weeks in letter recognition, word blending, pencil grip, or number confidence.
               </p>
+            </div>
+
+            {/* Supporting Montessori Hands-On Imagery */}
+            {/* Note: Stock photos — replace with real client photos once marketing consent is obtained */}
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <div className="relative rounded-2xl overflow-hidden border border-[#C7DAF3]/80 shadow-xs group bg-[#FCFBF7]">
+                <Image
+                  src={STOCK_IMAGERY.whyLearnSensory.src}
+                  alt={STOCK_IMAGERY.whyLearnSensory.alt}
+                  width={STOCK_IMAGERY.whyLearnSensory.width}
+                  height={STOCK_IMAGERY.whyLearnSensory.height}
+                  className="w-full h-28 sm:h-32 object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#14263F]/85 via-transparent to-transparent flex items-end p-2.5">
+                  <span className="text-[11px] font-bold text-white tracking-wide">
+                    Sensory Manipulatives
+                  </span>
+                </div>
+              </div>
+
+              <div className="relative rounded-2xl overflow-hidden border border-[#F3E7C4] shadow-xs group bg-[#FCFBF7]">
+                <Image
+                  src={STOCK_IMAGERY.whyLearnNumeracy.src}
+                  alt={STOCK_IMAGERY.whyLearnNumeracy.alt}
+                  width={STOCK_IMAGERY.whyLearnNumeracy.width}
+                  height={STOCK_IMAGERY.whyLearnNumeracy.height}
+                  className="w-full h-28 sm:h-32 object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#14263F]/85 via-transparent to-transparent flex items-end p-2.5">
+                  <span className="text-[11px] font-bold text-white tracking-wide">
+                    Child-Paced Growth
+                  </span>
+                </div>
+              </div>
             </div>
 
             <div className="pt-2">

@@ -43,7 +43,7 @@ export default function WhatITutorSection() {
     {
       id: 'practical-life',
       title: 'Practical Life Skills',
-      badgeText: '✂',
+      badgeIcon: Scissors,
       badgeColor: 'bg-emerald-500',
       icon: Scissors,
       iconColor: 'text-emerald-500',
@@ -60,7 +60,7 @@ export default function WhatITutorSection() {
     {
       id: 'cultural',
       title: 'Cultural & General Knowledge',
-      badgeText: '🌍',
+      badgeIcon: Globe,
       badgeColor: 'bg-sky-500',
       icon: Globe,
       iconColor: 'text-[#1E4E8C]',
@@ -77,7 +77,7 @@ export default function WhatITutorSection() {
     {
       id: 'arts',
       title: 'Creative & Expressive Arts',
-      badgeText: '🎨',
+      badgeIcon: Palette,
       badgeColor: 'bg-purple-500',
       icon: Palette,
       iconColor: 'text-purple-500',
@@ -133,7 +133,11 @@ export default function WhatITutorSection() {
                     <Icon className={`w-6 h-6 ${item.iconColor}`} />
                   </div>
                   <span className={`w-8 h-8 rounded-full ${item.badgeColor} text-white font-bold text-xs flex items-center justify-center shadow-xs`}>
-                    {item.badgeText}
+                    {item.badgeIcon ? (
+                      <item.badgeIcon className="w-4 h-4 text-white" />
+                    ) : (
+                      item.badgeText
+                    )}
                   </span>
                 </div>
 
