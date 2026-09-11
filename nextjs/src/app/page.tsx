@@ -3,14 +3,17 @@
 import React from 'react';
 import Navbar from '@/components/Navbar';
 import HeroSection from '@/components/HeroSection';
+import StatsSection from '@/components/StatsSection';
 import AboutSection from '@/components/AboutSection';
+import InteractiveLessonDemoSection from '@/components/InteractiveLessonDemoSection';
 import WhatITutorSection from '@/components/WhatITutorSection';
 import WhyLearnSection from '@/components/WhyLearnSection';
 import LearningOptionsSection from '@/components/LearningOptionsSection';
+import LearningMomentsSection from '@/components/LearningMomentsSection';
 import TestimonialsSection from '@/components/TestimonialsSection';
 import EnquiryFormSection from '@/components/EnquiryFormSection';
 import Footer from '@/components/Footer';
-import { PageTransition } from '@/components/motion';
+import { PageTransition, ScrollReveal } from '@/components/motion';
 
 export default function Home() {
   return (
@@ -22,12 +25,42 @@ export default function Home() {
       <main className="flex-grow">
         <PageTransition>
           <HeroSection />
-          <AboutSection />
-          <WhatITutorSection />
-          <WhyLearnSection />
-          <LearningOptionsSection />
-          <TestimonialsSection />
-          <EnquiryFormSection />
+
+          <ScrollReveal>
+            <StatsSection />
+          </ScrollReveal>
+
+          <ScrollReveal>
+            <AboutSection />
+          </ScrollReveal>
+
+          <ScrollReveal>
+            <InteractiveLessonDemoSection />
+          </ScrollReveal>
+
+          <ScrollReveal>
+            <WhatITutorSection />
+          </ScrollReveal>
+
+          <ScrollReveal>
+            <WhyLearnSection />
+          </ScrollReveal>
+
+          <ScrollReveal>
+            <LearningOptionsSection />
+          </ScrollReveal>
+
+          <ScrollReveal>
+            <LearningMomentsSection />
+          </ScrollReveal>
+
+          <ScrollReveal>
+            <TestimonialsSection />
+          </ScrollReveal>
+
+          <ScrollReveal>
+            <EnquiryFormSection />
+          </ScrollReveal>
         </PageTransition>
       </main>
 
