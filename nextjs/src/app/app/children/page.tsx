@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Users, PlusCircle, Award, Calendar, Sparkles, CheckCircle2, Clock, Mail, Phone, Info, BookOpen } from 'lucide-react';
+import { Users, PlusCircle, Award, Calendar, Sparkles, CheckCircle2, Clock, Mail, Phone, Info, BookOpen, Upload, CreditCard, Activity, AlertCircle } from 'lucide-react';
 import { useGlobal } from '@/lib/context/GlobalContext';
 import { EYTService, Child } from '@/lib/eyt-service';
 import AddChildModal from '@/components/AddChildModal';
+import BulkImportModal from '@/components/BulkImportModal';
 import { StaggerContainer, StaggerItem, MotionCard, MotionButton, Skeleton, useToast } from '@/components/motion';
 
 export default function ChildrenPage() {
@@ -16,6 +17,7 @@ export default function ChildrenPage() {
   const [children, setChildren] = useState<Child[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddChildOpen, setIsAddChildOpen] = useState(false);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
 
   const loadData = useCallback(() => {
     if (isOwner) {
@@ -40,6 +42,11 @@ export default function ChildrenPage() {
     showToast(isOwner ? 'Student profile enrolled successfully!' : 'Child profile registered successfully!');
   };
 
+  const handleBulkImportCompleted = (importedList: Child[]) => {
+    loadData();
+    showToast(`Bulk import completed: ${importedList.length} student profile${importedList.length === 1 ? '' : 's'} enrolled!`);
+  };
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* Header */}
@@ -59,13 +66,25 @@ export default function ChildrenPage() {
           </p>
         </div>
 
-        <MotionButton
-          onClick={() => setIsAddChildOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#D4A017] text-white font-bold text-sm hover:bg-[#A9790A] transition-all shadow-sm shadow-amber-200 self-start sm:self-auto"
-        >
-          <PlusCircle className="w-4 h-4" />
-          {isOwner ? 'Enroll Student' : 'Add Child Profile'}
-        </MotionButton>
+        <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+          {isOwner && (
+            <MotionButton
+              onClick={() => setIsBulkImportOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-[#C7DAF3] text-[#1E4E8C] font-bold text-sm hover:bg-[#E8F0FA] hover:border-[#1E4E8C] transition-all shadow-xs"
+            >
+              <Upload className="w-4 h-4 text-[#D4A017]" />
+              Bulk Import (CSV)
+            </MotionButton>
+          )}
+
+          <MotionButton
+            onClick={() => setIsAddChildOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#D4A017] text-white font-bold text-sm hover:bg-[#A9790A] transition-all shadow-sm shadow-amber-200"
+          >
+            <PlusCircle className="w-4 h-4" />
+            {isOwner ? 'Enroll Student' : 'Add Child Profile'}
+          </MotionButton>
+        </div>
       </div>
 
       {/* Owner Info Box regarding Parent Linking */}
@@ -128,6 +147,7 @@ export default function ChildrenPage() {
             const childMilestones = EYTService.getChildMilestones(child.id);
             const achievedCount = childMilestones.filter((m) => m.status === 'achieved').length;
             const inProgressCount = childMilestones.filter((m) => m.status === 'in_progress').length;
+            const practiceSummary = EYTService.getHomePracticeSummary(child.id);
 
             return (
               <StaggerItem key={child.id}>
@@ -236,6 +256,54 @@ export default function ChildrenPage() {
                     </div>
                   )}
 
+                  {/* Home Practice Summary (Child Mode Activity) */}
+                  <div className="p-3 bg-[#FCFBF7] rounded-xl border border-amber-200/70 space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-heading font-extrabold text-[11px] uppercase tracking-wider text-[#1E4E8C] flex items-center gap-1.5">
+                        <Activity className="w-3.5 h-3.5 text-[#D4A017]" />
+                        Home Practice
+                      </span>
+                      {practiceSummary.is_disengaged ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
+                          <AlertCircle className="w-3 h-3 text-amber-700" />
+                          {practiceSummary.days_inactive}d Inactive
+                        </span>
+                      ) : practiceSummary.practiced_days_last_7 > 0 ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
+                          Active
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-medium text-gray-500">
+                          Quiet
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-center text-xs">
+                      <div className="p-2 bg-white rounded-lg border border-gray-100 shadow-2xs">
+                        <div className="text-[10px] text-[#6B7280]">Last 7 Days</div>
+                        <div className="font-bold text-[#14263F]">
+                          Practiced {practiceSummary.practiced_days_last_7} of 7 days
+                        </div>
+                      </div>
+                      <div className="p-2 bg-white rounded-lg border border-gray-100 shadow-2xs">
+                        <div className="text-[10px] text-[#6B7280]">Last Active</div>
+                        <div className="font-bold text-[#14263F] truncate" title={practiceSummary.last_active_formatted}>
+                          {practiceSummary.last_active_formatted}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-1 border-t border-amber-100 flex items-start gap-1 text-[11px]">
+                      <span className="text-[#6B7280] shrink-0 font-medium">This week&apos;s pillars:</span>
+                      <span className="font-semibold text-[#1E4E8C]">
+                        {practiceSummary.this_week_pillars.length > 0
+                          ? practiceSummary.this_week_pillars.join(', ')
+                          : 'None this week'}
+                      </span>
+                    </div>
+                  </div>
+
                   {/* Skill stats pill */}
                   <div className="grid grid-cols-2 gap-2 text-center text-xs pt-1">
                     <div className="p-2 bg-emerald-50 text-emerald-800 rounded-lg font-medium border border-emerald-100">
@@ -258,13 +326,23 @@ export default function ChildrenPage() {
                   </Link>
 
                   {isOwner && (
-                    <Link
-                      href={`/app/assignments?childId=${child.id}&action=create`}
-                      className="font-bold text-[#1E4E8C] bg-[#E8F0FA] hover:bg-[#d8e6f7] px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors border border-[#1E4E8C]/20 shadow-2xs"
-                    >
-                      <BookOpen className="w-3.5 h-3.5 text-[#D4A017]" />
-                      <span>Assign Homework</span>
-                    </Link>
+                    <>
+                      <Link
+                        href={`/app/assignments?childId=${child.id}&action=create`}
+                        className="font-bold text-[#1E4E8C] bg-[#E8F0FA] hover:bg-[#d8e6f7] px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors border border-[#1E4E8C]/20 shadow-2xs"
+                      >
+                        <BookOpen className="w-3.5 h-3.5 text-[#D4A017]" />
+                        <span>Assign Homework</span>
+                      </Link>
+
+                      <Link
+                        href={`/app/invoices?childId=${child.id}&action=create`}
+                        className="font-bold text-[#1E4E8C] bg-[#FCFBF7] hover:bg-amber-50 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors border border-[#D4A017]/40 text-[#14263F] shadow-2xs"
+                      >
+                        <CreditCard className="w-3.5 h-3.5 text-[#D4A017]" />
+                        <span>Issue Invoice</span>
+                      </Link>
+                    </>
                   )}
 
                   <Link
@@ -287,6 +365,14 @@ export default function ChildrenPage() {
         isOpen={isAddChildOpen}
         onClose={() => setIsAddChildOpen(false)}
         onChildAdded={handleChildAdded}
+      />
+
+      {/* Bulk Import Modal */}
+      <BulkImportModal
+        isOpen={isBulkImportOpen}
+        onClose={() => setIsBulkImportOpen(false)}
+        onImportCompleted={handleBulkImportCompleted}
+        existingChildren={children}
       />
     </div>
   );
