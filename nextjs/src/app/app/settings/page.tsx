@@ -17,7 +17,13 @@ import {
   Download,
   ExternalLink,
   Mail,
-  FileText
+  FileText,
+  Sparkles,
+  Tag,
+  Globe,
+  Award,
+  Check,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useGlobal } from '@/lib/context/GlobalContext';
@@ -25,20 +31,25 @@ import {
   EYTService,
   Child,
   BankDetails,
-  NotificationPreferences
+  NotificationPreferences,
+  PricingSettings,
+  PublicStatsSettings,
+  formatDualRate,
+  detectUserTimezone,
+  getTimezoneAbbr
 } from '@/lib/eyt-service';
 import { createSPASassClientAuthenticated as createSPASassClient } from '@/lib/supabase/client';
 
 type ActiveTab = 'profile' | 'security' | 'notifications' | 'business' | 'children' | 'privacy';
 
 export default function SettingsPage() {
-  const { profile, refreshUser } = useGlobal();
+  const { profile, updateProfileState } = useGlobal();
   const isOwner = profile?.role === 'owner';
 
   // Navigation tab
   const [activeTab, setActiveTab] = useState<ActiveTab>('profile');
 
-  // Status banners
+  // Status feedback
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -58,6 +69,18 @@ export default function SettingsPage() {
 
   // Bank & Business Details (Owner only)
   const [bankDetails, setBankDetails] = useState<BankDetails>(() => EYTService.getBankDetails());
+
+  // Pricing & Trial Settings (Owner only)
+  const [pricingSettings, setPricingSettings] = useState<PricingSettings>(() =>
+    EYTService.getPricingSettings()
+  );
+  const [isSavingPricing, setIsSavingPricing] = useState(false);
+
+  // Public Career Statistics (Owner only)
+  const [publicStats, setPublicStats] = useState<PublicStatsSettings>(() =>
+    EYTService.getPublicStats()
+  );
+  const [isSavingPublicStats, setIsSavingPublicStats] = useState(false);
 
   // Notification Preferences
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>(() =>
@@ -96,10 +119,43 @@ export default function SettingsPage() {
     }
     if (isOwner) {
       setBankDetails(EYTService.getBankDetails());
+      setPricingSettings(EYTService.getPricingSettings());
+      setPublicStats(EYTService.getPublicStats());
     } else if (profile?.id) {
       setChildrenList(EYTService.getChildren(profile.id));
     }
   }, [profile, isOwner]);
+
+  const handleSavePricingSettings = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingPricing(true);
+    try {
+      const updated = EYTService.updatePricingSettings(pricingSettings);
+      setPricingSettings(updated);
+      showSuccess('Public pricing and trial session settings updated successfully! Rates are now live on public pages.');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to save pricing settings.');
+    } finally {
+      setIsSavingPricing(false);
+    }
+  };
+
+  const handleSavePublicStats = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingPublicStats(true);
+    try {
+      const updated = EYTService.updatePublicStats({
+        years_of_experience: Math.max(1, Number(publicStats.years_of_experience) || 15),
+        families_served: Math.max(1, Number(publicStats.families_served) || 100),
+      });
+      setPublicStats(updated);
+      showSuccess('Public career statistics updated successfully! They are now live on your homepage counters.');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to save career statistics.');
+    } finally {
+      setIsSavingPublicStats(false);
+    }
+  };
 
   const showSuccess = (msg: string) => {
     setSuccessMessage(msg);
@@ -139,10 +195,8 @@ export default function SettingsPage() {
         profile?.id || 'profile-user'
       );
       setAvatarPreview(publicUrl);
-
-      // Auto update profile record with new avatar
-      EYTService.updateProfile({ avatar_url: publicUrl });
-      refreshUser();
+      updateProfileState({ avatar_url: publicUrl });
+      await EYTService.updateProfileAsync({ avatar_url: publicUrl });
       showSuccess('Profile photo uploaded and saved successfully.');
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to upload profile photo.');
@@ -151,10 +205,10 @@ export default function SettingsPage() {
     }
   };
 
-  const handleRemovePhoto = () => {
+  const handleRemovePhoto = async () => {
     setAvatarPreview(null);
-    EYTService.updateProfile({ avatar_url: null });
-    refreshUser();
+    updateProfileState({ avatar_url: null });
+    await EYTService.updateProfileAsync({ avatar_url: null });
     showSuccess('Profile photo removed.');
   };
 
@@ -167,13 +221,14 @@ export default function SettingsPage() {
 
     setIsSaving(true);
     try {
-      EYTService.updateProfile({
+      const updatedFields = {
         full_name: fullName.trim(),
         email: email.trim(),
         phone: phone.trim() || null,
         avatar_url: avatarPreview,
-      });
-      refreshUser();
+      };
+      updateProfileState(updatedFields);
+      await EYTService.updateProfileAsync(updatedFields);
       showSuccess('Account profile updated successfully.');
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to update profile.');
@@ -407,14 +462,21 @@ export default function SettingsPage() {
     }
   };
 
-  const handleConfirmConsent = () => {
-    EYTService.updateProfile({
+  const handleConfirmConsent = async () => {
+    const timestamp = new Date().toISOString();
+    const version = 'NDPA-2023-v1.0';
+    updateProfileState({
       parental_consent_given: true,
-      parental_consent_at: new Date().toISOString(),
-      parental_consent_version: 'NDPA-2023-v1.0',
+      parental_consent_at: timestamp,
+      parental_consent_version: version,
     });
-    refreshUser();
-    showSuccess('Parental consent recorded successfully under NDPA 2023.');
+    await EYTService.updateProfileAsync({
+      parental_consent_given: true,
+      parental_consent_at: timestamp,
+      parental_consent_version: version,
+    });
+    setActiveTab('privacy');
+    showSuccess('Parental consent recorded successfully under NDPA 2023 Section 31 & 34.');
   };
 
   const deletionEmailSubject = encodeURIComponent(
@@ -666,6 +728,30 @@ export default function SettingsPage() {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-xs font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                  Scheduling & Reminder Timezone
+                </label>
+                <div className="p-3 bg-[#E8F0FA] rounded-xl border border-[#C7DAF3] flex items-center justify-between text-xs text-[#1E4E8C]">
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-[#D4A017] shrink-0" />
+                    <span>
+                      {isOwner
+                        ? 'Africa/Lagos (West Africa Time, WAT • UTC+1)'
+                        : `${profile?.timezone || detectUserTimezone()} (${getTimezoneAbbr(profile?.timezone || detectUserTimezone())})`}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white text-[#1E4E8C] border border-[#C7DAF3]">
+                    {isOwner ? 'Permanent Tutor Timezone' : 'Active Local Timezone'}
+                  </span>
+                </div>
+                <p className="text-[10px] text-gray-500 mt-1">
+                  {isOwner
+                    ? 'Mrs Sarah consistently views all teaching hours and bookings in West Africa Time (WAT).'
+                    : 'Session times and automated lesson reminder emails are automatically delivered in your local timezone.'}
+                </p>
+              </div>
+
               <div className="pt-4 border-t border-gray-100 flex justify-end">
                 <button
                   type="submit"
@@ -911,7 +997,8 @@ export default function SettingsPage() {
       {/* TAB 4: OWNER BANK & INVOICE DETAILS                        */}
       {/* ========================================================= */}
       {isOwner && activeTab === 'business' && (
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-xs space-y-6">
+        <div className="space-y-6">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-xs space-y-6">
           <div className="flex items-start justify-between gap-4">
             <div>
               <h3 className="font-heading font-bold text-lg text-[#1E4E8C] flex items-center gap-2">
@@ -1038,6 +1125,83 @@ export default function SettingsPage() {
               </div>
             </div>
 
+            <div className="pt-4 border-t border-gray-100 space-y-4">
+              <div className="flex items-center gap-2">
+                <Globe className="w-4 h-4 text-[#D4A017]" />
+                <h4 className="font-heading font-bold text-sm text-[#1E4E8C]">
+                  International Payment Instructions & Links (EUR / GBP / USD)
+                </h4>
+              </div>
+              <p className="text-xs text-[#6B7280]">
+                Configure instructions and payment handles displayed to international families on non-NGN tuition invoices.
+              </p>
+
+              <div>
+                <label className="block text-xs font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                  International Payment Instructions
+                </label>
+                <textarea
+                  rows={2}
+                  value={bankDetails.international_payment_instructions || ''}
+                  onChange={(e) =>
+                    setBankDetails({ ...bankDetails, international_payment_instructions: e.target.value })
+                  }
+                  placeholder="Instructions displayed on EUR, GBP, and USD invoices..."
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-[#1E4E8C] focus:border-[#1E4E8C] outline-none resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                    PayPal.me Link (Optional)
+                  </label>
+                  <input
+                    type="url"
+                    value={bankDetails.paypal_link || ''}
+                    onChange={(e) => setBankDetails({ ...bankDetails, paypal_link: e.target.value })}
+                    placeholder="https://paypal.me/yourusername"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-[#1E4E8C] focus:border-[#1E4E8C] outline-none"
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    Direct PayPal payment link.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                    Wise Account / Tag (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={bankDetails.wise_details || ''}
+                    onChange={(e) => setBankDetails({ ...bankDetails, wise_details: e.target.value })}
+                    placeholder="e.g. @sarah-eyt-academy or IBAN"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-[#1E4E8C] focus:border-[#1E4E8C] outline-none"
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    Wise tag or IBAN/sort code instructions.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                    Stripe Payment Link (Optional)
+                  </label>
+                  <input
+                    type="url"
+                    value={bankDetails.stripe_link || ''}
+                    onChange={(e) => setBankDetails({ ...bankDetails, stripe_link: e.target.value })}
+                    placeholder="https://buy.stripe.com/..."
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-[#1E4E8C] focus:border-[#1E4E8C] outline-none"
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    Direct card payment checkout link.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="pt-4 border-t border-gray-100 flex justify-end">
               <button
                 type="submit"
@@ -1049,6 +1213,370 @@ export default function SettingsPage() {
               </button>
             </div>
           </form>
+        </div>
+
+        {/* PUBLIC PRICING & TRIAL SESSION SETTINGS */}
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-xs space-y-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="font-heading font-bold text-lg text-[#1E4E8C] flex items-center gap-2">
+                <Tag className="w-5 h-5 text-[#D4A017]" />
+                Public Pricing & Trial Session Offerings
+              </h3>
+              <p className="text-xs text-[#6B7280] mt-0.5">
+                Manage your public tutoring rates, monthly package descriptions, and introductory trial session availability.
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleSavePricingSettings} className="space-y-6">
+            <div className="p-4 bg-[#FCFBF7] rounded-2xl border border-[#F3E7C4] text-xs text-[#1E4E8C] flex items-start gap-3">
+              <Info className="w-4 h-4 text-[#D4A017] shrink-0 mt-0.5" />
+              <p>
+                <strong>Transparent Pricing Guarantee:</strong> Rates entered here are displayed directly on the public learning options section. If left blank or set to 0, the card will display &ldquo;Contact for pricing&rdquo;.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                  Online Tutorial Rate (per session)
+                </label>
+                <input
+                  type="text"
+                  value={pricingSettings.online_session_rate || ''}
+                  onChange={(e) => setPricingSettings({ ...pricingSettings, online_session_rate: e.target.value })}
+                  placeholder="e.g. ₦15,000 (leave blank for 'Contact for pricing')"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-[#1E4E8C] focus:border-[#1E4E8C] outline-none"
+                />
+                <p className="text-[10px] text-gray-500 mt-1">
+                  Displayed on the Online Tutorial card on the homepage.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                  Home Tutorial Rate (per session)
+                </label>
+                <input
+                  type="text"
+                  value={pricingSettings.home_session_rate || ''}
+                  onChange={(e) => setPricingSettings({ ...pricingSettings, home_session_rate: e.target.value })}
+                  placeholder="e.g. ₦25,000 (leave blank for 'Contact for pricing')"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-[#1E4E8C] focus:border-[#1E4E8C] outline-none"
+                />
+                <p className="text-[10px] text-gray-500 mt-1">
+                  Displayed on the Home Tutorial card on the homepage.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                Monthly Package Description / Pricing (Optional)
+              </label>
+              <textarea
+                rows={2}
+                value={pricingSettings.monthly_package_rate || ''}
+                onChange={(e) => setPricingSettings({ ...pricingSettings, monthly_package_rate: e.target.value })}
+                placeholder="e.g. Custom monthly packages available — enquire for tailored 2x or 3x weekly bundles..."
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-[#1E4E8C] focus:border-[#1E4E8C] outline-none resize-none"
+              />
+              <p className="text-[10px] text-gray-500 mt-1">
+                Optional highlight banner displayed beneath learning options for bundled monthly tuition.
+              </p>
+            </div>
+
+            {/* SECONDARY CURRENCY & DUAL RATE CONFIGURATION */}
+            <div className="pt-4 border-t border-gray-100 space-y-4">
+              <div className="flex items-center gap-2">
+                <Globe className="w-4 h-4 text-[#D4A017]" />
+                <h4 className="font-heading font-bold text-sm text-[#1E4E8C]">
+                  Secondary Rate Display (Optional for International Clients)
+                </h4>
+              </div>
+              <p className="text-xs text-[#6B7280]">
+                Optionally display a second rate alongside your primary Nigerian rate (e.g. &ldquo;Online session: ₦15,000 / €30&rdquo;). If only one rate is set, only that one displays on the public website.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                    Secondary Currency
+                  </label>
+                  <select
+                    value={pricingSettings.secondary_currency || ''}
+                    onChange={(e) =>
+                      setPricingSettings({ ...pricingSettings, secondary_currency: e.target.value || null })
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-[#1E4E8C] focus:border-[#1E4E8C] outline-none bg-white font-medium"
+                  >
+                    <option value="">None (Primary only)</option>
+                    <option value="EUR">Euro (EUR €)</option>
+                    <option value="GBP">British Pound (GBP £)</option>
+                    <option value="USD">US Dollar (USD $)</option>
+                  </select>
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    Secondary currency for foreign families.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                    Online Rate (Secondary Currency)
+                  </label>
+                  <input
+                    type="text"
+                    value={pricingSettings.online_session_secondary_rate || ''}
+                    onChange={(e) =>
+                      setPricingSettings({ ...pricingSettings, online_session_secondary_rate: e.target.value })
+                    }
+                    placeholder="e.g. €30 (leave blank to omit)"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-[#1E4E8C] focus:border-[#1E4E8C] outline-none"
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    Rate shown on the Online card if set.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                    Home Rate (Secondary Currency)
+                  </label>
+                  <input
+                    type="text"
+                    value={pricingSettings.home_session_secondary_rate || ''}
+                    onChange={(e) =>
+                      setPricingSettings({ ...pricingSettings, home_session_secondary_rate: e.target.value })
+                    }
+                    placeholder="e.g. €50 (leave blank to omit)"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-[#1E4E8C] focus:border-[#1E4E8C] outline-none"
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    Rate shown on the Home card if set.
+                  </p>
+                </div>
+              </div>
+
+              {(pricingSettings.online_session_secondary_rate || pricingSettings.home_session_secondary_rate) && (
+                <div className="p-3 bg-[#E8F0FA] rounded-xl border border-[#C7DAF3] text-xs text-[#1E4E8C] flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[#D4A017] shrink-0" />
+                  <span>
+                    <strong>Live Public Rate Preview:</strong> Online: {formatDualRate(pricingSettings.online_session_rate, pricingSettings.online_session_secondary_rate)} • Home: {formatDualRate(pricingSettings.home_session_rate, pricingSettings.home_session_secondary_rate)}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* TRIAL SESSION MECHANIC */}
+            <div className="pt-4 border-t border-gray-100">
+              <div className="p-5 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-[#D4A017]" />
+                      <h4 className="font-heading font-bold text-sm text-[#1E4E8C]">
+                        Introductory Trial Session Feature
+                      </h4>
+                    </div>
+                    <p className="text-xs text-[#6B7280]">
+                      Offer a 1-on-1 diagnostic trial session. Strictly limited to 1 trial session per child/family to prevent repeat bookings.
+                    </p>
+                  </div>
+
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={pricingSettings.trial_session_enabled}
+                      onChange={(e) =>
+                        setPricingSettings({ ...pricingSettings, trial_session_enabled: e.target.checked })
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                  </label>
+                </div>
+
+                {pricingSettings.trial_session_enabled && (
+                  <div className="pt-3 border-t border-gray-200/60 space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                          Trial Session Price (NGN ₦) *
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="500"
+                          value={pricingSettings.trial_session_price}
+                          onChange={(e) =>
+                            setPricingSettings({
+                              ...pricingSettings,
+                              trial_session_price: Math.max(0, Number(e.target.value) || 0),
+                            })
+                          }
+                          placeholder="0 for Free"
+                          className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-[#1E4E8C] focus:border-[#1E4E8C] outline-none"
+                        />
+                        <p className="text-[10px] text-gray-500 mt-1">
+                          {pricingSettings.trial_session_price === 0
+                            ? 'Marked as FREE / Complimentary on public badges & invoices.'
+                            : `Priced at ₦${Number(pricingSettings.trial_session_price).toLocaleString()} on trial invoices.`}
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                          Trial Session Title / Description
+                        </label>
+                        <input
+                          type="text"
+                          value={pricingSettings.trial_session_description || ''}
+                          onChange={(e) =>
+                            setPricingSettings({
+                              ...pricingSettings,
+                              trial_session_description: e.target.value,
+                            })
+                          }
+                          placeholder="e.g. 1-on-1 Montessori Diagnostic & Learning Style Evaluation"
+                          className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-[#1E4E8C] focus:border-[#1E4E8C] outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100 text-[11px] text-emerald-800 flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>
+                        Trial CTA is <strong>active</strong> on your public homepage and enquiry form. Bookings will enforce the 1-trial-per-child rule automatically.
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-100 flex justify-end">
+              <button
+                type="submit"
+                disabled={isSavingPricing}
+                className="px-6 py-2.5 rounded-xl bg-[#1E4E8C] text-white font-bold text-xs hover:bg-[#153763] transition-all flex items-center gap-2 shadow-xs"
+              >
+                <Save className="w-4 h-4" />
+                {isSavingPricing ? 'Saving Pricing...' : 'Save Pricing & Trial Settings'}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* PUBLIC HOMEPAGE CAREER STATISTICS */}
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-200 shadow-xs space-y-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="font-heading font-bold text-lg text-[#1E4E8C] flex items-center gap-2">
+                <Award className="w-5 h-5 text-[#D4A017]" />
+                Public Homepage Career Statistics
+              </h3>
+              <p className="text-xs text-[#6B7280] mt-0.5">
+                Update your verified career facts displayed in the animated counters on the public homepage.
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleSavePublicStats} className="space-y-6">
+            <div className="p-4 bg-[#FCFBF7] rounded-2xl border border-[#F3E7C4] text-xs text-[#1E4E8C] flex items-start gap-3">
+              <Info className="w-4 h-4 text-[#D4A017] shrink-0 mt-0.5" />
+              <p>
+                <strong>Truthful Statistics Policy:</strong> These counters show your real career milestones. They animate up when parents scroll past them on the homepage. As your practice grows over time, you can update them here without touching code.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+              <div>
+                <label className="block text-xs font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                  Years of Teaching Experience *
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="1"
+                    max="60"
+                    required
+                    value={publicStats.years_of_experience}
+                    onChange={(e) =>
+                      setPublicStats({
+                        ...publicStats,
+                        years_of_experience: Math.max(1, Number(e.target.value) || 1),
+                      })
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm font-semibold focus:ring-2 focus:ring-[#1E4E8C] focus:border-[#1E4E8C] outline-none"
+                  />
+                  <span className="absolute right-3.5 top-2.5 text-xs font-bold text-[#D4A017] pointer-events-none">
+                    + Years
+                  </span>
+                </div>
+                <p className="text-[10px] text-gray-500 mt-1">
+                  Displays on homepage as &ldquo;{publicStats.years_of_experience}+ Years of Experience&rdquo;.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                  Families Nurtured / Supported *
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="1"
+                    max="10000"
+                    required
+                    value={publicStats.families_served}
+                    onChange={(e) =>
+                      setPublicStats({
+                        ...publicStats,
+                        families_served: Math.max(1, Number(e.target.value) || 1),
+                      })
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-sm font-semibold focus:ring-2 focus:ring-[#1E4E8C] focus:border-[#1E4E8C] outline-none"
+                  />
+                  <span className="absolute right-3.5 top-2.5 text-xs font-bold text-[#D4A017] pointer-events-none">
+                    + Families
+                  </span>
+                </div>
+                <p className="text-[10px] text-gray-500 mt-1">
+                  Displays on homepage as &ldquo;{publicStats.families_served}+ Families Supported&rdquo;.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#14263F] uppercase tracking-wider mb-1">
+                  Core Learning Areas (Fixed)
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    disabled
+                    value="5 Core Pillars"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm font-semibold text-gray-600 outline-none cursor-not-allowed"
+                  />
+                </div>
+                <p className="text-[10px] text-gray-500 mt-1">
+                  Phonics, Math, Practical Life, Arts, & Social Growth.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-100 flex justify-end">
+              <button
+                type="submit"
+                disabled={isSavingPublicStats}
+                className="px-6 py-2.5 rounded-xl bg-[#1E4E8C] text-white font-bold text-xs hover:bg-[#153763] transition-all flex items-center gap-2 shadow-xs"
+              >
+                <Save className="w-4 h-4" />
+                {isSavingPublicStats ? 'Saving Career Stats...' : 'Save Career Statistics'}
+              </button>
+            </div>
+          </form>
+        </div>
         </div>
       )}
 
@@ -1160,7 +1688,7 @@ export default function SettingsPage() {
                     onClick={() => setEditingChildId(null)}
                     className="p-1 text-gray-400 hover:text-gray-700 rounded-lg"
                   >
-                    ✕
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
 
@@ -1340,8 +1868,8 @@ export default function SettingsPage() {
             <div className="p-5 rounded-2xl bg-[#FCFBF7] border border-[#E5E0D8] space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-xs shrink-0">
-                    ✓
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                    <Check className="w-4 h-4 text-emerald-700" />
                   </div>
                   <div>
                     <div className="text-xs font-bold text-[#14263F] flex items-center gap-2">
@@ -1391,7 +1919,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h3 className="font-heading font-bold text-base text-[#1E4E8C]">
-                    Right of Access & Portability (NDPA §34)
+                    Right of Access & Portability (NDPA 2023, Section 34)
                   </h3>
                   <p className="text-xs text-[#6B7280] mt-1.5 leading-relaxed">
                     Under Section 34 of the NDPA 2023, you have the statutory right to request and receive a digital copy of
@@ -1428,7 +1956,7 @@ export default function SettingsPage() {
                 </div>
                 <div>
                   <h3 className="font-heading font-bold text-base text-[#1E4E8C]">
-                    Right to Erasure / Account Deletion (NDPA §34)
+                    Right to Erasure / Account Deletion (NDPA 2023, Section 34)
                   </h3>
                   <p className="text-xs text-[#6B7280] mt-1.5 leading-relaxed">
                     You have the right to request the permanent deletion and erasure of your family account and all associated child

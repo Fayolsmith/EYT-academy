@@ -1,73 +1,95 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Sparkles, Phone, Mail, CheckCircle2, Heart, BookOpen, Star, Calendar } from 'lucide-react';
+import { Sparkles, Mail, Heart, BookOpen, Star, Calendar, MessageCircle } from 'lucide-react';
+import { EYTService, PricingSettings } from '@/lib/eyt-service';
 
 export default function HeroSection() {
-  return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-[#E8F0FA]/40 via-white to-white pt-10 pb-20 lg:pt-16 lg:pb-28">
-      {/* Decorative background circles */}
-      <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-gradient-to-tr from-[#E8F0FA]/60 via-[#FDF7E7]/40 to-transparent rounded-full blur-3xl -z-10 pointer-events-none" />
+  const [ratingSummary, setRatingSummary] = useState<{ average: number | null; count: number }>({
+    average: null,
+    count: 0,
+  });
+  const [pricing, setPricing] = useState<PricingSettings | null>(null);
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+  useEffect(() => {
+    setRatingSummary(EYTService.getPublicRatingSummary());
+    setPricing(EYTService.getPricingSettings());
+  }, []);
+
+  return (
+    <section className="relative overflow-hidden bg-gradient-to-b from-[#E8F0FA]/30 via-white to-white pt-12 pb-20 lg:pt-20 lg:pb-28">
+      {/* Decorative background blobs */}
+      <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-[#D4A017]/10 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-96 h-96 rounded-full bg-[#1E4E8C]/10 blur-3xl pointer-events-none" />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
           
-          {/* Left Column: Copy & CTAs */}
-          <div className="lg:col-span-7 space-y-6 text-left">
-            {/* Top Pill / Motto */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#E8F0FA] border border-[#C7DAF3] shadow-sm">
+          {/* Left Column: Text & CTAs */}
+          <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
+            {/* Live Trust & Experience Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-gray-200 shadow-xs">
               <Sparkles className="w-4 h-4 text-[#D4A017]" />
-              <span className="text-xs sm:text-sm font-semibold text-[#1E4E8C] tracking-wide">
-                Nurturing Young Minds. Building Bright Futures.
+              <span className="text-xs font-bold tracking-wide uppercase text-[#1E4E8C]">
+                {ratingSummary.count > 0 ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-flex items-center text-amber-500 font-extrabold gap-1">
+                      <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                      {ratingSummary.average?.toFixed(1)}
+                    </span>
+                    <span className="text-[#6B7280]">
+                      ({ratingSummary.count} {ratingSummary.count === 1 ? 'review' : 'reviews'})
+                    </span>
+                    <span>•</span>
+                    <span>15+ Years Montessori Experience</span>
+                  </span>
+                ) : (
+                  'Montessori Certified • 15+ Years Experience'
+                )}
               </span>
             </div>
 
             {/* Main Headline */}
-            <div className="space-y-2">
-              <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[#1E4E8C] leading-[1.1]">
-                EARLY YEARS <br />
-                <span className="text-[#D4A017] inline-block relative">
-                  TUTOR
-                  <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 200 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M2 9C50 3 150 3 198 9" stroke="#D4A017" strokeWidth="4" strokeLinecap="round"/>
-                  </svg>
+            <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[#1E4E8C] tracking-tight leading-[1.15]">
+              Nurturing Young Minds Through{' '}
+              <span className="text-[#D4A017] underline decoration-amber-200 decoration-wavy">
+                Montessori
+              </span>{' '}
+              Excellence
+            </h1>
+
+            {/* Subheading */}
+            <p className="text-lg sm:text-xl text-[#6B7280] max-w-2xl mx-auto lg:mx-0 font-normal leading-relaxed">
+              Personalized early years tutoring for Nursery, Preschool, and Primary 1 & 2 learners (ages 3–8).
+              Building confidence, phonics fluency, numeracy mastery, and a lifelong love for learning.
+            </p>
+
+            {/* Tuition Rate Indicator */}
+            {pricing && (
+              <div className="inline-flex flex-wrap items-center justify-center lg:justify-start gap-2 text-xs sm:text-sm font-semibold text-[#14263F] bg-amber-50/80 border border-amber-200/80 px-4 py-2 rounded-2xl">
+                <span>Tuition from:</span>
+                <span className="font-extrabold text-[#1E4E8C]">
+                  {pricing.currency}{Number(pricing.online_session_rate).toLocaleString()}/session
                 </span>
-              </h1>
-              <p className="text-xl sm:text-2xl font-bold text-[#14263F] pt-2">
-                Online & Home Tutorial For Children Ages 3–8
-              </p>
-            </div>
+                {pricing.trial_session_enabled && (
+                  <>
+                    <span className="text-gray-300">•</span>
+                    <span className="text-emerald-700 font-bold">
+                      {pricing.trial_session_price === 0
+                        ? 'Diagnostic Trial Session Available (Free)'
+                        : `Diagnostic Trial: ${pricing.currency}${Number(pricing.trial_session_price).toLocaleString()}`}
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
 
-            {/* Mission / Flyer Quote */}
-            <blockquote className="border-l-4 border-[#D4A017] pl-4 py-1 text-base sm:text-lg text-[#14263F]/90 italic bg-[#E8F0FA]/30 rounded-r-lg">
-              “I provide engaging, child-centered lessons that build strong foundational skills in a nurturing and supportive environment.”
-            </blockquote>
-
-            {/* Key Qualifications Badges */}
-            <div className="flex flex-wrap gap-2 pt-1">
-              {[
-                'Montessori Trained',
-                'SEN-Inclusive',
-                'British Curriculum',
-                'Experienced & Patient',
-                'Ages 3–8 (Nursery to Primary 2)',
-              ].map((badge) => (
-                <div
-                  key={badge}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-white border border-[#E8F0FA] shadow-xs text-xs font-semibold text-[#1E4E8C]"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#D4A017]" />
-                  <span>{badge}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Primary Action Buttons */}
-            <div className="flex flex-wrap items-center gap-4 pt-4">
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
               <Link
-                href="/signup?intent=booking"
+                href="#enquiry"
                 className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-[#D4A017] text-white font-bold text-base hover:bg-[#A9790A] transition-all shadow-md shadow-amber-200/50 hover:shadow-lg hover:-translate-y-0.5"
               >
                 <Calendar className="w-5 h-5" />
@@ -79,15 +101,17 @@ export default function HeroSection() {
                 className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-[#1E4E8C] text-white font-bold text-base hover:bg-[#153763] transition-all shadow-md shadow-blue-200/50 hover:shadow-lg hover:-translate-y-0.5"
               >
                 <BookOpen className="w-5 h-5 text-[#D4A017]" />
-                Client & Parent Portal
+                Guardian & Parent Portal
               </Link>
 
               <a
-                href="tel:09133651659"
+                href="https://wa.me/2349133651659"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-white border-2 border-[#1E4E8C] text-[#1E4E8C] font-bold text-sm hover:bg-[#E8F0FA] transition-all"
               >
-                <Phone className="w-4 h-4 text-[#D4A017]" />
-                Call 09133651659
+                <MessageCircle className="w-4 h-4 text-emerald-600" />
+                WhatsApp
               </a>
             </div>
 
@@ -133,10 +157,17 @@ export default function HeroSection() {
                       <h2 className="text-xl font-bold font-heading text-white">Mrs Sarah</h2>
                       <p className="text-xs text-[#FDF7E7] font-medium">Early Years Teacher & Specialist</p>
                     </div>
-                    <div className="bg-[#D4A017] text-[#14263F] px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow">
-                      <Star className="w-3 h-3 fill-[#14263F]" />
-                      5.0 Tutor
-                    </div>
+                    {ratingSummary.count > 0 && ratingSummary.average !== null ? (
+                      <div className="bg-[#D4A017] text-[#14263F] px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow">
+                        <Star className="w-3 h-3 fill-[#14263F]" />
+                        <span>{ratingSummary.average.toFixed(1)} ({ratingSummary.count} {ratingSummary.count === 1 ? 'review' : 'reviews'})</span>
+                      </div>
+                    ) : (
+                      <div className="bg-white/95 backdrop-blur-xs text-[#1E4E8C] px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow border border-[#C7DAF3]">
+                        <Sparkles className="w-3 h-3 text-[#D4A017]" />
+                        <span>New on Platform</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
