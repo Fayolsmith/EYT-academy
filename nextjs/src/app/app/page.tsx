@@ -10,27 +10,50 @@ import {
   PlusCircle,
   Video,
   Mail,
-  Phone,
-  BookOpen
+  BookOpen,
+  Heart,
+  Sparkles,
+  MessageCircle,
+  Activity,
+  AlertTriangle,
+  CheckCircle2,
+  ArrowRight,
 } from 'lucide-react';
-import { useGlobal } from '@/lib/context/GlobalContext';
-import { EYTService, Child, Booking, Enquiry, Invoice, Milestone } from '@/lib/eyt-service';
+import {
+  EYTService,
+  Child,
+  Booking,
+  Enquiry,
+  Invoice,
+  Milestone,
+  PracticeAlert,
+  formatCurrency,
+  formatDateInTimezone,
+  formatTimeInTimezone,
+  detectUserTimezone,
+  SARAH_TIMEZONE
+} from '@/lib/eyt-service';
 import AddChildModal from '@/components/AddChildModal';
+import { useGlobal } from '@/lib/context/GlobalContext';
 
 export default function DashboardPage() {
   const { profile } = useGlobal();
   const isOwner = profile?.role === 'owner';
+  const userTz = isOwner ? SARAH_TIMEZONE : (profile?.timezone || detectUserTimezone());
 
   const [children, setChildren] = useState<Child[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [practiceAlerts, setPracticeAlerts] = useState<PracticeAlert[]>([]);
   const [isAddChildOpen, setIsAddChildOpen] = useState(false);
 
   const loadDashboardData = useCallback(() => {
     if (isOwner) {
       setChildren(EYTService.getChildren());
+      const checkResult = EYTService.checkAndGenerateDisengagementAlerts();
+      setPracticeAlerts(checkResult.allActiveAlerts);
     } else {
       setChildren(EYTService.getChildren(profile?.id));
     }
@@ -86,15 +109,49 @@ export default function DashboardPage() {
                 <Mail className="w-4 h-4 text-[#D4A017]" />
                 Enquiries ({enquiries.filter(e => e.status === 'new').length} New)
               </Link>
+              <Link
+                href="#practice-alerts-section"
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm ${
+                  practiceAlerts.length > 0
+                    ? 'bg-amber-500 text-white hover:bg-amber-600 ring-2 ring-amber-300'
+                    : 'bg-white border border-[#C7DAF3] text-[#1E4E8C] hover:bg-[#E8F0FA]'
+                }`}
+              >
+                <Activity className="w-4 h-4 text-[#D4A017]" />
+                Practice Alerts ({practiceAlerts.length})
+              </Link>
+              <Link
+                href="/app/testimonials"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-[#C7DAF3] text-[#1E4E8C] font-bold text-sm hover:bg-[#E8F0FA] transition-all shadow-xs"
+              >
+                <Heart className="w-4 h-4 text-rose-500" />
+                Testimonials
+              </Link>
             </div>
           ) : (
-            <button
-              onClick={() => setIsAddChildOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#D4A017] text-white font-bold text-sm hover:bg-[#A9790A] transition-all shadow-sm shadow-amber-200"
-            >
-              <PlusCircle className="w-4 h-4" />
-              Add Child Profile
-            </button>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Link
+                href="/app/child-mode"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1E4E8C] text-white font-bold text-sm hover:bg-[#153763] transition-all shadow-sm shadow-blue-900/20 ring-2 ring-[#D4A017]"
+              >
+                <Sparkles className="w-4 h-4 text-[#D4A017]" />
+                Enter Child Mode
+              </Link>
+              <button
+                onClick={() => setIsAddChildOpen(true)}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#D4A017] text-white font-bold text-sm hover:bg-[#A9790A] transition-all shadow-sm shadow-amber-200"
+              >
+                <PlusCircle className="w-4 h-4" />
+                Add Child Profile
+              </button>
+              <Link
+                href="/app/testimonials"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#E8F0FA] border border-[#C7DAF3] text-[#1E4E8C] font-bold text-sm hover:bg-[#d4e4f7] transition-all shadow-xs"
+              >
+                <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />
+                Leave a Testimonial
+              </Link>
+            </div>
           )}
         </div>
 
@@ -107,6 +164,36 @@ export default function DashboardPage() {
       {/* ========================================================= */}
       {!isOwner && (
         <div className="space-y-8">
+          
+          {/* Play & Learn Time — Child Mode Launch Card */}
+          <div className="bg-gradient-to-r from-[#FCFBF7] via-[#FFFDF9] to-[#E8F0FA] rounded-3xl p-6 sm:p-7 border-2 border-[#D4A017]/40 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-5">
+            <div className="flex items-center gap-4 text-center sm:text-left">
+              <div className="w-14 h-14 rounded-2xl bg-[#1E4E8C] text-[#D4A017] flex items-center justify-center border border-[#D4A017] shadow-xs shrink-0 mx-auto sm:mx-0">
+                <Sparkles className="w-7 h-7" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center justify-center sm:justify-start gap-2">
+                  <h3 className="font-heading font-extrabold text-lg text-[#1E4E8C]">
+                    Play &amp; Learn Time (Child Mode)
+                  </h3>
+                  <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    Parent Unlocked
+                  </span>
+                </div>
+                <p className="text-xs text-[#6B7280] max-w-xl">
+                  Hand your device to your child for a supervised, distraction-free learning session. Includes Mrs Sarah&apos;s adaptive mascot helper (Pip), home practice tasks, and the 5 Montessori games with a secure parental exit gate.
+                </p>
+              </div>
+            </div>
+
+            <Link
+              href="/app/child-mode"
+              className="px-6 py-3.5 rounded-2xl bg-[#D4A017] text-white font-heading font-extrabold text-sm hover:bg-[#B4820A] active:scale-95 transition-all shadow-md shadow-amber-200/60 flex items-center gap-2 shrink-0 cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Enter Child Mode</span>
+            </Link>
+          </div>
           
           {/* Children Section */}
           <div className="space-y-4">
@@ -217,6 +304,12 @@ export default function DashboardPage() {
                           <span className="text-xs font-bold text-[#1E4E8C]">
                             {b.child_name}
                           </span>
+                          {b.session_type === 'trial' && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                              <Sparkles className="w-2.5 h-2.5 text-emerald-600" />
+                              Trial Session
+                            </span>
+                          )}
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase bg-[#E8F0FA] text-[#1E4E8C]">
                             {b.mode} Tutorial
                           </span>
@@ -225,28 +318,31 @@ export default function DashboardPage() {
                           </span>
                         </div>
                         <p className="text-sm font-semibold text-[#14263F]">
-                          {new Date(b.start_time).toLocaleDateString('en-GB', {
-                            weekday: 'short',
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })} • {new Date(b.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {formatDateInTimezone(b.start_time, userTz, false)} •{' '}
+                          {formatTimeInTimezone(b.start_time, userTz, true)}
                         </p>
                         {b.notes && (
                           <p className="text-xs text-[#6B7280]">Focus: {b.notes}</p>
                         )}
                       </div>
 
-                      {b.meeting_link && b.mode === 'online' && (
-                        <a
-                          href={b.meeting_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#1E4E8C] text-white text-xs font-bold hover:bg-[#153763] transition-colors shrink-0"
-                        >
-                          <Video className="w-3.5 h-3.5 text-[#D4A017]" />
-                          Join Video Call
-                        </a>
+                      {b.mode === 'online' && (
+                        b.meeting_link ? (
+                          <a
+                            href={b.meeting_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#1E4E8C] text-white text-xs font-bold hover:bg-[#153763] transition-colors shrink-0"
+                          >
+                            <Video className="w-3.5 h-3.5 text-[#D4A017]" />
+                            Join Video Call
+                          </a>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 text-gray-500 text-xs font-medium shrink-0">
+                            <Video className="w-3.5 h-3.5 text-gray-400" />
+                            Meeting link not yet provided
+                          </span>
+                        )
                       )}
                     </div>
                   ))
@@ -278,11 +374,13 @@ export default function DashboardPage() {
 
                 <div className="pt-1 flex flex-col gap-2">
                   <a
-                    href="tel:09133651659"
-                    className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#D4A017] text-white text-xs font-bold hover:bg-[#A9790A] transition-colors"
+                    href="https://wa.me/2349133651659"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-colors"
                   >
-                    <Phone className="w-4 h-4" />
-                    Call 09133651659
+                    <MessageCircle className="w-4 h-4" />
+                    WhatsApp Mrs Sarah
                   </a>
                   <a
                     href="mailto:sarahoakhena@gmail.com"
@@ -313,7 +411,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="text-right">
                         <div className="font-bold text-[#1E4E8C]">
-                          ₦{inv.amount.toLocaleString()}
+                          {formatCurrency(inv.amount, inv.currency)}
                         </div>
                         <span
                           className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
@@ -389,6 +487,118 @@ export default function DashboardPage() {
               </div>
               <div className="text-[11px] text-[#6B7280] mt-1">Montessori EYFS Skills</div>
             </div>
+          </div>
+
+          {/* Home Practice Disengagement Alerts Section (Similar in spirit to Enquiry Inbox) */}
+          <div id="practice-alerts-section" className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="font-heading text-xl font-bold text-[#1E4E8C] flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-[#D4A017]" />
+                  Home Practice Inactivity Alerts
+                </h2>
+                <p className="text-xs text-[#6B7280]">
+                  Flagged students with 5+ consecutive days of zero Child Mode activity
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-bold px-3 py-1 rounded-full ${
+                  practiceAlerts.length > 0
+                    ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                    : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                }`}>
+                  {practiceAlerts.length > 0 ? `${practiceAlerts.length} Attention Needed` : 'All Active / 0 Inactive'}
+                </span>
+              </div>
+            </div>
+
+            {practiceAlerts.length === 0 ? (
+              <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 flex items-center gap-3 text-xs text-emerald-800">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  All enrolled learners are currently engaged or within regular home practice intervals. No 5+ day inactivity streaks detected.
+                </span>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-[#14263F]">
+                  <thead className="bg-[#FCFBF7] text-[#1E4E8C] uppercase font-bold text-[10px] border-b border-amber-200/50">
+                    <tr>
+                      <th className="p-3 rounded-l-lg">Student</th>
+                      <th className="p-3">Inactivity Streak</th>
+                      <th className="p-3">Last Active</th>
+                      <th className="p-3">Parent &amp; Contact</th>
+                      <th className="p-3">Status</th>
+                      <th className="p-3 rounded-r-lg text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {practiceAlerts.map((alert) => (
+                      <tr key={alert.id} className="hover:bg-amber-50/40 transition-colors">
+                        <td className="p-3 font-bold text-[#1E4E8C]">{alert.child_name}</td>
+                        <td className="p-3">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-100 text-amber-900 font-bold text-[11px] border border-amber-200">
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                            {alert.days_inactive} consecutive days quiet
+                          </span>
+                        </td>
+                        <td className="p-3 text-gray-700">
+                          {alert.last_active_date || 'No activity yet'}
+                        </td>
+                        <td className="p-3">
+                          <div className="font-semibold text-[#14263F]">{alert.parent_name}</div>
+                          <div className="text-[11px] text-[#6B7280]">{alert.parent_email || 'No email'}</div>
+                          {alert.parent_phone && (
+                            <div className="text-[11px] text-[#D4A017] font-medium">{alert.parent_phone}</div>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-100 text-amber-800">
+                            {alert.status}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {alert.parent_phone && (
+                              <a
+                                href={`https://wa.me/${alert.parent_phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hello ${alert.parent_name}, Mrs Sarah here! I noticed ${alert.child_name} hasn't been active on Child Mode recently. Hope everything is going well with home practice!`)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors flex items-center gap-1"
+                                title="Check in via WhatsApp"
+                              >
+                                <MessageCircle className="w-3 h-3" />
+                                <span>WhatsApp</span>
+                              </a>
+                            )}
+                            {alert.parent_email && (
+                              <a
+                                href={`mailto:${alert.parent_email}?subject=${encodeURIComponent(`Checking in on ${alert.child_name}'s Home Practice with Mrs Sarah`)}&body=${encodeURIComponent(`Dear ${alert.parent_name},\n\nI hope you're having a wonderful week! I noticed ${alert.child_name} hasn't had a chance to practice on Child Mode recently.\n\nPlease let me know if you need any guidance or support with the Montessori activities.\n\nWarm regards,\nMrs Sarah`)}`}
+                                className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-[#E8F0FA] text-[#1E4E8C] hover:bg-[#d8e6f7] transition-colors flex items-center gap-1"
+                                title="Send email check-in"
+                              >
+                                <Mail className="w-3 h-3" />
+                                <span>Email</span>
+                              </a>
+                            )}
+                            <button
+                              onClick={() => {
+                                EYTService.acknowledgePracticeAlert(alert.id);
+                                loadDashboardData();
+                              }}
+                              className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors cursor-pointer"
+                              title="Mark this quiet streak as acknowledged"
+                            >
+                              Acknowledge
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* Enquiries Inbox Section */}
@@ -516,9 +726,10 @@ export default function DashboardPage() {
 
                     <Link
                       href="/app/children"
-                      className="text-xs font-bold text-[#1E4E8C] hover:underline shrink-0"
+                      className="inline-flex items-center gap-1 text-xs font-bold text-[#1E4E8C] hover:underline shrink-0"
                     >
-                      View Directory →
+                      View Directory
+                      <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                   </div>
                 ))}
@@ -546,7 +757,7 @@ export default function DashboardPage() {
                       <div className="text-[10px] text-gray-400 mt-0.5">{inv.invoice_number}</div>
                     </div>
                     <div className="text-right space-y-1">
-                      <div className="font-bold text-[#1E4E8C]">₦{inv.amount.toLocaleString()}</div>
+                      <div className="font-bold text-[#1E4E8C]">{formatCurrency(inv.amount, inv.currency)}</div>
                       <button
                         onClick={() => {
                           if (inv.status === 'unpaid') {
@@ -560,7 +771,14 @@ export default function DashboardPage() {
                             : 'bg-amber-500 text-white hover:bg-amber-600'
                         }`}
                       >
-                        {inv.status === 'paid' ? 'Paid ✓' : 'Mark as Paid'}
+                        {inv.status === 'paid' ? (
+                          <span className="inline-flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Paid
+                          </span>
+                        ) : (
+                          'Mark as Paid'
+                        )}
                       </button>
                     </div>
                   </div>
