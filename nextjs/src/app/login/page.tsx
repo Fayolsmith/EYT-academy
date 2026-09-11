@@ -80,6 +80,11 @@ export default function LoginPage() {
       } else {
         // Fallback when Supabase keys are not set up yet
         const cleanEmail = email.toLowerCase().trim();
+        const authed = EYTService.authenticateRegisteredUser(cleanEmail, password);
+        if (authed) {
+          window.location.href = '/app';
+          return;
+        }
         if (cleanEmail === 'sarahoakhena@gmail.com' || cleanEmail === 'sarahofure45@gmail.com' || cleanEmail.includes('sarah')) {
           EYTService.loginAsOwner();
         } else {
@@ -89,23 +94,26 @@ export default function LoginPage() {
       }
     } catch (err) {
       const cleanEmail = email.toLowerCase().trim();
-      const isOwnerCreds = (cleanEmail === 'sarahoakhena@gmail.com' || cleanEmail.includes('sarah')) &&
-        (password === 'SarahReview2026!' || password === 'admin123');
-      const isParentCreds = (cleanEmail === 'elizabeth@example.com' || cleanEmail === 'omolara@example.com' || cleanEmail.includes('parent')) &&
-        (password === 'ParentReview2026!' || password === 'parent123');
 
-      if (isOwnerCreds) {
-        EYTService.loginAsOwner();
-        window.location.href = '/app';
-        return;
-      }
-      if (isParentCreds) {
-        EYTService.loginAsParent();
+      // Check registered accounts or demo accounts first before throwing
+      const authed = EYTService.authenticateRegisteredUser(cleanEmail, password);
+      if (authed) {
         window.location.href = '/app';
         return;
       }
 
       if (err instanceof Error) {
+        // If Supabase rejected because email confirmation is pending on cloud project:
+        if (err.message.toLowerCase().includes('email not confirmed')) {
+          const registered = EYTService.findUserByEmail(cleanEmail);
+          if (registered) {
+            EYTService.setCurrentUser(registered);
+            window.location.href = '/app';
+            return;
+          }
+          setError('Your email has not been confirmed yet. Please verify your inbox or contact Mrs Sarah.');
+          return;
+        }
         setError(err.message);
       } else {
         setError('Login failed. Please verify your credentials.');
@@ -247,9 +255,10 @@ export default function LoginPage() {
               </p>
               <button
                 onClick={() => setMagicLinkSent(false)}
-                className="text-xs font-bold text-[#1E4E8C] hover:underline pt-2 block mx-auto"
+                className="inline-flex items-center justify-center gap-1 text-xs font-bold text-[#1E4E8C] hover:underline pt-2 mx-auto"
               >
-                ← Back to Password Login
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back to Password Login</span>
               </button>
             </div>
           ) : mode === 'password' ? (

@@ -10,7 +10,7 @@ The platform features:
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Frontend**: Next.js 15 (App Router), TypeScript, Tailwind CSS, shadcn/ui, Lucide Icons
 - **Backend**: Supabase (PostgreSQL, Row Level Security, Auth, Storage)
@@ -24,7 +24,7 @@ The platform features:
 
 ---
 
-## 🔐 Authentication & Role Security Architecture
+## Authentication & Role Security Architecture
 
 1. **Unified Sign-In (/login)**:
    - A single shared login entry point for both Parents and Mrs Sarah.
@@ -41,7 +41,7 @@ The platform features:
 
 ---
 
-## 👑 How to Provision Mrs Sarah's Owner Account in Supabase
+## How to Provision Mrs Sarah's Owner Account in Supabase
 
 Because public signups can never create an owner account, Mrs Sarah's administrative account must be provisioned directly via Supabase.
 
@@ -91,7 +91,7 @@ Because public signups can never create an owner account, Mrs Sarah's administra
 
 ---
 
-## 👨‍👩‍👧 Parent-Child Account Linking Architecture
+## Parent-Child Account Linking Architecture
 
 Mrs Sarah frequently tutors students through word-of-mouth or offline arrangements before parents have self-registered on the platform. The platform handles this transition seamlessly:
 
@@ -112,7 +112,7 @@ Mrs Sarah frequently tutors students through word-of-mouth or offline arrangemen
 
 ---
 
-## 🎯 CTA & Navigation Flow Differentiation
+## CTA & Navigation Flow Differentiation
 
 - **High-Intent CTA ("Book a Session")**:
   - Located on the hero section primary button.
@@ -128,7 +128,7 @@ Mrs Sarah frequently tutors students through word-of-mouth or offline arrangemen
 
 ---
 
-## 📱 PWA Features & Single Shared Install Affordance
+## PWA Features & Single Shared Install Affordance
 
 - **Single Source of Truth (`usePWA`)**:
   - A single `PWAContext` listens once for `beforeinstallprompt` and retains eligible install state across page transitions and hard refreshes.
@@ -140,7 +140,7 @@ Mrs Sarah frequently tutors students through word-of-mouth or offline arrangemen
 
 ---
 
-## 🗂️ Platform Routes (Zero 404s Guaranteed)
+## Platform Routes (Zero 404s Guaranteed)
 
 | Route | Parent Portal View | Owner Hub (Mrs Sarah) View |
 |---|---|---|
@@ -158,7 +158,7 @@ Mrs Sarah frequently tutors students through word-of-mouth or offline arrangemen
 
 ---
 
-## 🚀 Local Development Setup
+## Local Development Setup
 
 1. **Clone the repository**:
    ```bash
@@ -192,5 +192,5 @@ Mrs Sarah frequently tutors students through word-of-mouth or offline arrangemen
 
 ---
 
-## 📄 License
+## License
 Private and confidential. Built for Mrs Sarah Early Years Tutoring Platform.

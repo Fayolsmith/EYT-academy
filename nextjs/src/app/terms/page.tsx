@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
+  ArrowRight,
   Calendar,
   Scale,
   BookOpen
@@ -161,7 +162,7 @@ export default function TermsOfServicePage() {
           <section className="space-y-3 pt-4 border-t border-gray-200 text-xs">
             <h2 className="font-heading text-base font-bold text-[#1E4E8C]">Questions Regarding These Terms?</h2>
             <p className="text-[#6B7280]">
-              If you have any questions regarding tutoring packages, scheduling policies, or terms of service, please contact Mrs Sarah Oakhena directly at <a href="mailto:sarahoakhena@gmail.com" className="text-[#1E4E8C] font-semibold hover:underline">sarahoakhena@gmail.com</a> or call <a href="tel:09133651659" className="text-[#1E4E8C] font-semibold hover:underline">09133651659</a>.
+              If you have any questions regarding tutoring packages, scheduling policies, or terms of service, please contact Mrs Sarah Oakhena directly at <a href="mailto:sarahoakhena@gmail.com" className="text-[#1E4E8C] font-semibold hover:underline">sarahoakhena@gmail.com</a> or via WhatsApp at <a href="https://wa.me/2349133651659" target="_blank" rel="noopener noreferrer" className="text-[#1E4E8C] font-semibold hover:underline">+234 913 365 1659</a>.
             </p>
           </section>
 
@@ -173,8 +174,9 @@ export default function TermsOfServicePage() {
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Return to Homepage</span>
           </Link>
-          <Link href="/privacy-policy" className="font-bold text-[#D4A017] hover:underline">
-            Read Child Privacy Policy →
+          <Link href="/privacy-policy" className="font-bold text-[#D4A017] hover:underline flex items-center gap-1">
+            <span>Read Child Privacy Policy</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
       </main>

@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Send, CheckCircle2, Phone, Mail, Clock, ShieldCheck, HeartHandshake } from 'lucide-react';
-import { EYTService } from '@/lib/eyt-service';
+import React, { useState, useEffect } from 'react';
+import { Send, CheckCircle2, Mail, Clock, ShieldCheck, HeartHandshake, MessageCircle } from 'lucide-react';
+import { EYTService, PricingSettings } from '@/lib/eyt-service';
 
 export default function EnquiryFormSection() {
   const [formData, setFormData] = useState({
@@ -13,9 +13,14 @@ export default function EnquiryFormSection() {
     message: '',
   });
 
+  const [pricing, setPricing] = useState<PricingSettings | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    setPricing(EYTService.getPricingSettings());
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,15 +81,16 @@ export default function EnquiryFormSection() {
             {/* Direct Contact Cards */}
             <div className="space-y-3 pt-2">
               <a
-                href="tel:09133651659"
-                className="flex items-center gap-4 p-4 rounded-xl bg-white border border-gray-200 hover:border-[#1E4E8C] transition-all shadow-xs group"
+                href="https://wa.me/2349133651659"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-4 p-4 rounded-xl bg-white border border-gray-200 hover:border-emerald-500 transition-all shadow-xs group"
               >
-                <div className="w-12 h-12 rounded-xl bg-[#E8F0FA] group-hover:bg-[#1E4E8C] flex items-center justify-center text-[#1E4E8C] group-hover:text-white transition-colors shrink-0">
-                  <Phone className="w-5 h-5 text-[#D4A017] group-hover:text-white" />
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 group-hover:bg-emerald-600 flex items-center justify-center text-emerald-600 group-hover:text-white transition-colors shrink-0">
+                  <MessageCircle className="w-5 h-5 text-emerald-600 group-hover:text-white" />
                 </div>
                 <div>
-                  <div className="text-xs font-semibold text-[#6B7280]">Call or WhatsApp</div>
-                  <div className="text-base font-bold text-[#1E4E8C]">09133651659</div>
+                  <div className="text-xs font-semibold text-[#6B7280]">Chat on WhatsApp</div>
                 </div>
               </a>
 
@@ -218,6 +224,11 @@ export default function EnquiryFormSection() {
                         <option value="online">Online Tutorial (Live Video)</option>
                         <option value="home">Home Tutorial (In-person)</option>
                         <option value="both">Flexible / Either</option>
+                        {pricing?.trial_session_enabled && (
+                          <option value="trial">
+                            Diagnostic Trial Session ({pricing.trial_session_price === 0 ? 'Free' : `${pricing.currency || '₦'}${Number(pricing.trial_session_price).toLocaleString()}`})
+                          </option>
+                        )}
                       </select>
                     </div>
                   </div>

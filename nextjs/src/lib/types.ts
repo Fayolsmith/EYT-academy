@@ -14,6 +14,46 @@ export type SubjectArea = 'literacy' | 'numeracy' | 'practical_life' | 'cultural
 export type InvoiceStatus = 'unpaid' | 'payment_submitted' | 'paid' | 'cancelled';
 export type EnquiryStatus = 'new' | 'contacted' | 'converted' | 'closed';
 export type AssignmentStatus = 'assigned' | 'submitted' | 'reviewed';
+export type TestimonialStatus = 'pending' | 'published' | 'rejected';
+export type TestimonialDisplayNameChoice = 'full_name' | 'first_name_last_initial' | 'anonymous';
+export type SessionType = 'standard' | 'trial';
+
+export type InvoiceCurrency = 'NGN' | 'GBP' | 'EUR' | 'USD';
+export type LearningPillar = 'numeracy' | 'phonics' | 'practical_life' | 'cultural' | 'arts';
+
+export interface ChildModeProgress {
+  id: string;
+  child_id: string;
+  date: string; // YYYY-MM-DD
+  pillars_completed: LearningPillar[];
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HomePracticeSummary {
+  child_id: string;
+  practiced_days_last_7: number;
+  last_active_date: string | null; // YYYY-MM-DD
+  last_active_formatted: string; // "Yesterday", "Sep 10, 2026", or "No activity yet"
+  this_week_pillars: string[]; // ["Numeracy", "Phonics & Literacy"]
+  days_inactive: number;
+  is_disengaged: boolean; // true if days_inactive >= 5
+}
+
+export interface PracticeAlert {
+  id: string;
+  child_id: string;
+  child_name: string;
+  parent_name: string;
+  parent_email: string;
+  parent_phone?: string;
+  days_inactive: number;
+  last_active_date: string | null;
+  streak_anchor_date: string; // Boundary anchor for current quiet streak to prevent repeated alerts
+  alerted_at: string;
+  status: 'active' | 'acknowledged' | 'dismissed';
+}
 
 export type Database = {
   __InternalSupabase: {
@@ -29,6 +69,7 @@ export type Database = {
           phone: string | null
           email: string | null
           avatar_url: string | null
+          timezone: string | null
           created_at: string
           updated_at: string
         }
@@ -39,6 +80,7 @@ export type Database = {
           phone?: string | null
           email?: string | null
           avatar_url?: string | null
+          timezone?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -49,6 +91,7 @@ export type Database = {
           phone?: string | null
           email?: string | null
           avatar_url?: string | null
+          timezone?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -187,6 +230,8 @@ export type Database = {
           start_time: string
           end_time: string
           notes: string | null
+          session_type?: SessionType
+          trial_price?: number | null
           created_at: string
           updated_at: string
         }
@@ -202,6 +247,8 @@ export type Database = {
           start_time: string
           end_time: string
           notes?: string | null
+          session_type?: SessionType
+          trial_price?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -217,6 +264,8 @@ export type Database = {
           start_time?: string
           end_time?: string
           notes?: string | null
+          session_type?: SessionType
+          trial_price?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -494,6 +543,143 @@ export type Database = {
           created_at?: string
         }
         Relationships: []
+      }
+      testimonials: {
+        Row: {
+          id: string
+          parent_profile_id: string
+          child_id: string | null
+          rating: number | null
+          body_text: string
+          display_name_choice: TestimonialDisplayNameChoice
+          status: TestimonialStatus
+          rejection_reason: string | null
+          submitted_at: string
+          reviewed_at: string | null
+        }
+        Insert: {
+          id?: string
+          parent_profile_id: string
+          child_id?: string | null
+          rating?: number | null
+          body_text: string
+          display_name_choice?: TestimonialDisplayNameChoice
+          status?: TestimonialStatus
+          rejection_reason?: string | null
+          submitted_at?: string
+          reviewed_at?: string | null
+        }
+        Update: {
+          id?: string
+          parent_profile_id?: string
+          child_id?: string | null
+          rating?: number | null
+          body_text?: string
+          display_name_choice?: TestimonialDisplayNameChoice
+          status?: TestimonialStatus
+          rejection_reason?: string | null
+          submitted_at?: string
+          reviewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "testimonials_parent_profile_id_fkey"
+            columns: ["parent_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "testimonials_child_id_fkey"
+            columns: ["child_id"]
+            isOneToOne: false
+            referencedRelation: "children"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      pricing_settings: {
+        Row: {
+          id: string
+          online_session_rate: string | null
+          home_session_rate: string | null
+          monthly_package_rate: string | null
+          currency: string | null
+          secondary_currency: string | null
+          online_session_secondary_rate: string | null
+          home_session_secondary_rate: string | null
+          trial_session_enabled: boolean
+          trial_session_price: number
+          trial_session_description: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          online_session_rate?: string | null
+          home_session_rate?: string | null
+          monthly_package_rate?: string | null
+          currency?: string | null
+          secondary_currency?: string | null
+          online_session_secondary_rate?: string | null
+          home_session_secondary_rate?: string | null
+          trial_session_enabled?: boolean
+          trial_session_price?: number
+          trial_session_description?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          online_session_rate?: string | null
+          home_session_rate?: string | null
+          monthly_package_rate?: string | null
+          currency?: string | null
+          secondary_currency?: string | null
+          online_session_secondary_rate?: string | null
+          home_session_secondary_rate?: string | null
+          trial_session_enabled?: boolean
+          trial_session_price?: number
+          trial_session_description?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      child_mode_progress: {
+        Row: {
+          id: string
+          child_id: string
+          date: string
+          pillars_completed: string[]
+          completed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          child_id: string
+          date: string
+          pillars_completed?: string[]
+          completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          child_id?: string
+          date?: string
+          pillars_completed?: string[]
+          completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "child_mode_progress_child_id_fkey"
+            columns: ["child_id"]
+            isOneToOne: false
+            referencedRelation: "children"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: {

@@ -64,7 +64,7 @@ export default function AuthLayout({
                     <div className="space-y-6 max-w-lg">
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-xs font-semibold text-[#D4A017] border border-[#D4A017]/30">
                             <Sparkles className="w-3.5 h-3.5" />
-                            Client & Parent Portal
+                            Guardian & Parent Portal
                         </div>
                         <h3 className="font-heading text-3xl font-bold mb-6 text-white leading-tight">
                             Track your child&apos;s learning journey and book sessions seamlessly.

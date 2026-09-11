@@ -3,9 +3,9 @@
 import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { BookOpen, ArrowLeft, Mail, Lock, User, Phone, ShieldCheck, AlertCircle, Calendar, Sparkles } from 'lucide-react';
+import { BookOpen, ArrowLeft, ArrowRight, Mail, Lock, User, Phone, ShieldCheck, AlertCircle, Calendar, Sparkles } from 'lucide-react';
 import { createSPAClient } from '@/lib/supabase/client';
-import { EYTService } from '@/lib/eyt-service';
+import { EYTService, UserProfile, detectUserTimezone } from '@/lib/eyt-service';
 import { PageTransition } from '@/components/motion';
 
 function SignupForm() {
@@ -41,6 +41,7 @@ function SignupForm() {
     try {
       const normalizedEmail = email.trim().toLowerCase();
       const consentTimestamp = new Date().toISOString();
+      const detectedTz = detectUserTimezone();
       let newUserId = '';
 
       if (EYTService.isSupabaseConfigured()) {
@@ -54,43 +55,69 @@ function SignupForm() {
               full_name: fullName.trim(),
               phone: phone.trim(),
               role: 'parent', // Enforced parent role
+              timezone: detectedTz,
               parental_consent_given: true,
               parental_consent_at: consentTimestamp,
-              parental_consent_version: '2026-v1',
+              parental_consent_version: 'NDPA-2023-v1.0',
             },
           },
         });
 
         if (signUpError) throw signUpError;
 
-        if (authData.user) {
-          newUserId = authData.user.id;
-          EYTService.setCurrentUser({
+        newUserId = authData.user?.id || `parent-${Date.now()}`;
+
+        const newProfile: UserProfile = {
+          id: newUserId,
+          role: 'parent',
+          full_name: fullName.trim(),
+          email: normalizedEmail,
+          phone: phone.trim() || null,
+          avatar_url: null,
+          timezone: detectedTz,
+          parental_consent_given: true,
+          parental_consent_at: consentTimestamp,
+          parental_consent_version: 'NDPA-2023-v1.0',
+        };
+
+        // Direct upsert to public.profiles table so it is available immediately
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (client.from('profiles') as any).upsert({
             id: newUserId,
             role: 'parent',
-            full_name: fullName.trim(),
-            email: normalizedEmail,
-            phone: phone.trim() || null,
-            avatar_url: null,
+            full_name: newProfile.full_name,
+            phone: newProfile.phone,
+            email: newProfile.email,
+            timezone: newProfile.timezone,
             parental_consent_given: true,
             parental_consent_at: consentTimestamp,
-            parental_consent_version: '2026-v1',
+            parental_consent_version: 'NDPA-2023-v1.0',
           });
+        } catch (upsertErr) {
+          console.warn('Supabase profiles direct upsert warning:', upsertErr);
         }
+
+        // Persist account credentials and session
+        EYTService.registerAccount(normalizedEmail, password, newProfile);
+        EYTService.setCurrentUser(newProfile);
       } else {
         // Fallback for preview before Supabase keys are configured
         newUserId = `parent-${Date.now()}`;
-        EYTService.setCurrentUser({
+        const newProfile: UserProfile = {
           id: newUserId,
           role: 'parent', // Strictly parent
           full_name: fullName.trim() || 'Parent',
           phone: phone.trim() || null,
           email: normalizedEmail,
           avatar_url: null,
+          timezone: detectedTz,
           parental_consent_given: true,
           parental_consent_at: consentTimestamp,
-          parental_consent_version: '2026-v1',
-        });
+          parental_consent_version: 'NDPA-2023-v1.0',
+        };
+        EYTService.registerAccount(normalizedEmail, password, newProfile);
+        EYTService.setCurrentUser(newProfile);
       }
 
       // Automatically link any student profiles Mrs Sarah may have previously created
@@ -286,7 +313,10 @@ function SignupForm() {
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : isBookingIntent ? (
-                'Continue to Booking Schedule →'
+                <>
+                  <span>Continue to Booking Schedule</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
               ) : (
                 'Create Parent Account'
               )}

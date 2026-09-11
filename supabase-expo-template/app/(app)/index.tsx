@@ -33,7 +33,7 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text }]}>
-            {t('home.welcome')}, {user?.email?.split('@')[0]}! 👋
+            {t('home.welcome')}, {user?.email?.split('@')[0]}!
           </Text>
         </View>
 

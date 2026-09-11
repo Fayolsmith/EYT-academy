@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Send, Phone, BookOpen } from 'lucide-react';
+import { MessageSquare, Send, BookOpen } from 'lucide-react';
 import { useGlobal } from '@/lib/context/GlobalContext';
 import { EYTService, Message } from '@/lib/eyt-service';
 
@@ -62,11 +62,13 @@ export default function MessagesPage() {
 
         <div className="flex items-center gap-2 text-xs">
           <a
-            href="tel:09133651659"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#E8F0FA] text-[#1E4E8C] font-semibold hover:bg-[#d8e6f7] transition-colors"
+            href="https://wa.me/2349133651659"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold hover:bg-emerald-100 transition-colors"
           >
-            <Phone className="w-3.5 h-3.5 text-[#D4A017]" />
-            <span>09133651659</span>
+            <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+            <span>WhatsApp Mrs Sarah</span>
           </a>
         </div>
       </div>

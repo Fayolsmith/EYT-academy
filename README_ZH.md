@@ -4,7 +4,7 @@
 
 一个生产就绪的 SaaS 模板，使用 Next.js 15、Supabase 和 Tailwind CSS 构建。此模板提供了快速启动 SaaS 产品所需的一切，包括身份验证、用户管理、文件存储等。
 
-> **🎉 新功能：移动应用现已推出！** 查看 [README_MOBILE_ZH.md](./README_MOBILE_ZH.md) 了解与同一 Supabase 后端共享的完整 React Native + Expo 移动应用！
+> ** 新功能：移动应用现已推出！** 查看 [README_MOBILE_ZH.md](./README_MOBILE_ZH.md) 了解与同一 Supabase 后端共享的完整 React Native + Expo 移动应用！
 > https://youtube.com/shorts/qcASa0Ywsy4?feature=share
 
 ## 在线演示
@@ -31,72 +31,72 @@ https://play.google.com/store/books/details?id=5UWBEQAAQBAJ - 9月1日起上线
 我们不再能够修改 auth 架构。我修改了原始迁移以将其重命名为自定义架构。如果你需要从旧版本迁移 - 查看 supabase/migrations_for_old/20250525183944_auth_removal.sql
 
 
-## 🚀 功能特性
+## 功能特性
 
 - **身份验证**
-    - 邮箱/密码身份验证
-    - 多因素身份验证（MFA）支持
-    - OAuth/SSO 集成就绪
-    - 密码重置和邮箱验证
+ - 邮箱/密码身份验证
+ - 多因素身份验证（MFA）支持
+ - OAuth/SSO 集成就绪
+ - 密码重置和邮箱验证
 
 - **用户管理**
-    - 用户配置文件和设置
-    - 安全密码管理
-    - 会话处理
+ - 用户配置文件和设置
+ - 安全密码管理
+ - 会话处理
 
 - **文件管理演示（支持 2FA）**
-    - 安全文件上传和存储
-    - 文件共享功能
-    - 拖放界面
-    - 进度跟踪
+ - 安全文件上传和存储
+ - 文件共享功能
+ - 拖放界面
+ - 进度跟踪
 
 - **任务管理演示（支持 2FA）**
-    - CRUD 操作示例
-    - 实时更新
-    - 过滤和排序
-    - 行级安全性
+ - CRUD 操作示例
+ - 实时更新
+ - 过滤和排序
+ - 行级安全性
 
 - **安全性**
-    - 行级安全（RLS）策略
-    - 安全文件存储策略
-    - 受保护的 API 路由
-    - MFA 实现
+ - 行级安全（RLS）策略
+ - 安全文件存储策略
+ - 受保护的 API 路由
+ - MFA 实现
 
 - **UI/UX**
-    - 现代、响应式设计
-    - 深色模式支持
-    - 加载状态
-    - 错误处理
-    - Toast 通知
-    - 彩纸动画
+ - 现代、响应式设计
+ - 深色模式支持
+ - 加载状态
+ - 错误处理
+ - Toast 通知
+ - 彩纸动画
 
 - **法律与合规**
-    - 隐私政策模板
-    - 服务条款模板
-    - 退款政策模板
-    - GDPR 就绪的 Cookie 同意
+ - 隐私政策模板
+ - 服务条款模板
+ - 退款政策模板
+ - GDPR 就绪的 Cookie 同意
 
-## 🛠️ 技术栈
+## 技术栈
 
 - **前端**
-    - Next.js 15（App Router）
-    - React 19
-    - Tailwind CSS
-    - shadcn/ui 组件
-    - Lucide 图标
+ - Next.js 15（App Router）
+ - React 19
+ - Tailwind CSS
+ - shadcn/ui 组件
+ - Lucide 图标
 
 - **后端**
-    - Supabase
-    - PostgreSQL
-    - 行级安全
-    - 存储桶
+ - Supabase
+ - PostgreSQL
+ - 行级安全
+ - 存储桶
 
 - **身份验证**
-    - Supabase Auth
-    - MFA 支持
-    - OAuth 提供商
+ - Supabase Auth
+ - MFA 支持
+ - OAuth 提供商
 
-## 📦 开始使用 - 本地开发
+## 开始使用 - 本地开发
 
 1. Fork 或克隆仓库
 2. 准备 Supabase 项目 URL（从 `项目设置` -> `API` -> `项目 URL` 获取）
@@ -127,9 +127,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=ANONKEY
 PRIVATE_SUPABASE_SERVICE_KEY=SERVICEROLEKEY
 ```
 10. 运行 yarn dev
-11. 访问 http://localhost:3000 🎉
+11. 访问 http://localhost:3000
 
-## 🚀 开始使用 - 部署到 Vercel
+## 开始使用 - 部署到 Vercel
 
 1. Fork 或克隆仓库
 2. 在 Vercel 中创建项目 - 选择你的仓库
@@ -138,7 +138,7 @@ PRIVATE_SUPABASE_SERVICE_KEY=SERVICEROLEKEY
 5. 调整 supabase/config.toml 中的 site_url 和 additional_redirect_urls（重要的是在 additional_redirect_urls 中要有 https://YOURURL/** - 这两个 **）
 6. 完成！
 
-## 📄 法律文档
+## 法律文档
 
 模板包含可自定义的法律文档 - 这些是 markdown 格式，所以你可以根据需要调整：
 
@@ -146,7 +146,7 @@ PRIVATE_SUPABASE_SERVICE_KEY=SERVICEROLEKEY
 - 服务条款（`/public/terms/terms-of-service.md`）
 - 退款政策（`/public/terms/refund-policy.md`）
 
-## 🎨 主题
+## 主题
 
 模板包含几个预构建主题：
 - `theme-sass`（默认）
@@ -156,7 +156,7 @@ PRIVATE_SUPABASE_SERVICE_KEY=SERVICEROLEKEY
 
 通过更新 `NEXT_PUBLIC_THEME` 环境变量来更改主题。
 
-## 🤝 贡献
+## 贡献
 
 欢迎贡献！请随时提交 Pull Request。
 
@@ -172,13 +172,13 @@ https://sasstemplate.razikus.com
 
 https://razikus.gumroad.com/l/supatemplate/GITHUB
 
-## 📝 许可证
+## 许可证
 
 本项目根据 Apache 许可证授权 - 详见 LICENSE 文件。
 
-## 💪 支持
+## 支持
 
-如果你觉得这个模板有帮助，请考虑给它一个星标 ⭐️
+如果你觉得这个模板有帮助，请考虑给它一个星标
 
 或者给我买杯咖啡！
 
@@ -190,7 +190,7 @@ https://razikus.gumroad.com/l/supatemplate/GITHUB
 - [GitHub](https://github.com/Razikus)
 - [网站](https://www.razikus.com)
 
-## 🙏 致谢
+## 致谢
 
 - [Next.js](https://nextjs.org/)
 - [Supabase](https://supabase.com/)

@@ -10,13 +10,13 @@
 
 
 
-## 📱 平台支持
+## 平台支持
 
 - **iOS** - 完整原生支持
 - **Android** - 完整原生支持
 - **共享后端** - 由 Supabase 驱动
 
-## 🚀 功能特性
+## 功能特性
 
 ### 身份验证
 - 邮箱/密码身份验证
@@ -54,9 +54,9 @@
 
 ### 国际化（i18n）
 - **支持的语言：**
-  - 英语（en）
-  - 波兰语（pl）
-  - 简体中文（zh）
+ - 英语（en）
+ - 波兰语（pl）
+ - 简体中文（zh）
 - 自动设备语言检测
 - 应用内语言切换
 - 持久语言偏好
@@ -73,7 +73,7 @@
 - 主题色彩方案
 - 响应式布局
 
-## 🛠️ 技术栈
+## 技术栈
 
 ### 核心
 - **React Native** 0.81.4
@@ -108,7 +108,7 @@
 - React hooks（useState、useEffect、useContext）
 - 用于持久存储的 AsyncStorage
 
-## 📦 开始使用
+## 开始使用
 
 ### 前提条件
 
@@ -149,17 +149,17 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
 
 ```json
 {
-  "expo": {
-    "name": "你的应用名称",
-    "slug": "your-app-slug",
-    "scheme": "yourappscheme",
-    "ios": {
-      "bundleIdentifier": "com.yourcompany.yourapp"
-    },
-    "android": {
-      "package": "com.yourcompany.yourapp"
-    }
-  }
+ "expo": {
+ "name": "你的应用名称",
+ "slug": "your-app-slug",
+ "scheme": "yourappscheme",
+ "ios": {
+ "bundleIdentifier": "com.yourcompany.yourapp"
+ },
+ "android": {
+ "package": "com.yourcompany.yourapp"
+ }
+ }
 }
 ```
 
@@ -192,59 +192,59 @@ npx expo run:android
 # 或使用 Expo Go 应用扫描二维码
 ```
 
-## 📁 项目结构
+## 项目结构
 
 ```
 supabase-expo-template/
-├── app/                          # 应用屏幕（Expo Router）
-│   ├── (app)/                    # 已认证的应用屏幕
-│   │   ├── _layout.tsx          # 选项卡导航
-│   │   ├── index.tsx            # 主屏幕
-│   │   ├── settings.tsx         # 设置屏幕
-│   │   ├── storage.tsx          # 文件管理
-│   │   └── tasks.tsx            # 任务管理
-│   ├── (auth)/                   # 身份验证屏幕
-│   │   ├── _layout.tsx          # 认证堆栈布局
-│   │   ├── login.tsx            # 登录屏幕
-│   │   ├── register.tsx         # 注册屏幕
-│   │   ├── forgot-password.tsx  # 密码重置请求
-│   │   ├── reset-password.tsx   # 密码重置表单
-│   │   ├── two-factor.tsx       # 2FA 验证
-│   │   └── verify-email.tsx     # 邮箱验证
-│   ├── _layout.tsx              # 根布局
-│   └── index.tsx                # 初始路由
-├── components/                   # 可重用组件
-│   ├── MFASetup.tsx             # MFA 注册组件
-│   └── ui/                       # UI 组件
-│       ├── alert.tsx
-│       ├── button.tsx
-│       ├── card.tsx
-│       └── input.tsx
+├── app/ # 应用屏幕（Expo Router）
+│ ├── (app)/ # 已认证的应用屏幕
+│ │ ├── _layout.tsx # 选项卡导航
+│ │ ├── index.tsx # 主屏幕
+│ │ ├── settings.tsx # 设置屏幕
+│ │ ├── storage.tsx # 文件管理
+│ │ └── tasks.tsx # 任务管理
+│ ├── (auth)/ # 身份验证屏幕
+│ │ ├── _layout.tsx # 认证堆栈布局
+│ │ ├── login.tsx # 登录屏幕
+│ │ ├── register.tsx # 注册屏幕
+│ │ ├── forgot-password.tsx # 密码重置请求
+│ │ ├── reset-password.tsx # 密码重置表单
+│ │ ├── two-factor.tsx # 2FA 验证
+│ │ └── verify-email.tsx # 邮箱验证
+│ ├── _layout.tsx # 根布局
+│ └── index.tsx # 初始路由
+├── components/ # 可重用组件
+│ ├── MFASetup.tsx # MFA 注册组件
+│ └── ui/ # UI 组件
+│ ├── alert.tsx
+│ ├── button.tsx
+│ ├── card.tsx
+│ └── input.tsx
 ├── constants/
-│   └── theme.ts                  # 主题颜色
-├── hooks/                        # 自定义 hooks
-│   └── use-color-scheme.ts
-├── lib/                          # 工具类
-│   ├── i18n.ts                  # i18n 配置
-│   ├── storage.ts               # AsyncStorage 包装器
-│   ├── supabase.ts              # Supabase 客户端
-│   └── types.ts                 # TypeScript 类型
-├── locales/                      # 翻译文件
-│   ├── en.json                  # 英语
-│   ├── pl.json                  # 波兰语
-│   └── zh.json                  # 中文
-├── app.json                      # Expo 配置
+│ └── theme.ts # 主题颜色
+├── hooks/ # 自定义 hooks
+│ └── use-color-scheme.ts
+├── lib/ # 工具类
+│ ├── i18n.ts # i18n 配置
+│ ├── storage.ts # AsyncStorage 包装器
+│ ├── supabase.ts # Supabase 客户端
+│ └── types.ts # TypeScript 类型
+├── locales/ # 翻译文件
+│ ├── en.json # 英语
+│ ├── pl.json # 波兰语
+│ └── zh.json # 中文
+├── app.json # Expo 配置
 ├── package.json
 └── tsconfig.json
 ```
 
-## 🔐 身份验证流程
+## 身份验证流程
 
 ### 登录流程
 1. 用户输入邮箱和密码
 2. 应用检查 MFA 要求
-3. 如果启用了 MFA → 重定向到 2FA 屏幕
-4. 如果没有 MFA → 重定向到应用
+3. 如果启用了 MFA -> 重定向到 2FA 屏幕
+4. 如果没有 MFA -> 重定向到应用
 
 ### 注册流程
 1. 用户输入邮箱和密码
@@ -265,7 +265,7 @@ supabase-expo-template/
 9. 重定向到应用
 
 ### MFA 注册流程
-1. 用户导航到设置 → MFA
+1. 用户导航到设置 -> MFA
 2. 用户提供设备名称
 3. 显示二维码
 4. 用户使用身份验证器应用扫描（Google Authenticator、Authy 等）
@@ -273,7 +273,7 @@ supabase-expo-template/
 6. 验证并注册因子
 7. 可以注册多个设备
 
-## 🌍 国际化
+## 国际化
 
 ### 添加新语言
 
@@ -286,12 +286,12 @@ touch locales/es.json
 2. **添加翻译：**
 ```json
 {
-  "auth": {
-    "login": "Iniciar sesión",
-    "register": "Registrarse",
-    ...
-  },
-  ...
+ "auth": {
+ "login": "Iniciar sesión",
+ "register": "Registrarse",
+ ...
+ },
+ ...
 }
 ```
 
@@ -300,13 +300,13 @@ touch locales/es.json
 import es from '../locales/es.json'
 
 i18n.use(initReactI18next).init({
-  resources: {
-    en: { translation: en },
-    pl: { translation: pl },
-    zh: { translation: zh },
-    es: { translation: es }, // 在这里添加
-  },
-  ...
+ resources: {
+ en: { translation: en },
+ pl: { translation: pl },
+ zh: { translation: zh },
+ es: { translation: es }, // 在这里添加
+ },
+ ...
 })
 ```
 
@@ -316,17 +316,17 @@ i18n.use(initReactI18next).init({
 
 ```typescript
 {
-  "auth": { /* 身份验证屏幕 */ },
-  "home": { /* 主屏幕 */ },
-  "app": { /* 应用导航 */ },
-  "storage": { /* 文件管理 */ },
-  "tasks": { /* 任务管理 */ },
-  "mfa": { /* MFA 屏幕 */ },
-  "settings": { /* 设置屏幕 */ }
+ "auth": { /* 身份验证屏幕 */ },
+ "home": { /* 主屏幕 */ },
+ "app": { /* 应用导航 */ },
+ "storage": { /* 文件管理 */ },
+ "tasks": { /* 任务管理 */ },
+ "mfa": { /* MFA 屏幕 */ },
+ "settings": { /* 设置屏幕 */ }
 }
 ```
 
-## 🚀 构建生产版本
+## 构建生产版本
 
 ### iOS
 
@@ -357,22 +357,22 @@ eas submit --platform android
 
 ```json
 {
-  "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
-    },
-    "preview": {
-      "distribution": "internal"
-    },
-    "production": {}
-  }
+ "build": {
+ "development": {
+ "developmentClient": true,
+ "distribution": "internal"
+ },
+ "preview": {
+ "distribution": "internal"
+ },
+ "production": {}
+ }
 }
 ```
 
 详情请参阅 [Expo EAS Build 文档](https://docs.expo.dev/build/introduction/)。
 
-## 🎨 自定义
+## 自定义
 
 ### 颜色和主题
 
@@ -380,18 +380,18 @@ eas submit --platform android
 
 ```typescript
 export const Colors = {
-  light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: '#0a7ea4', // 主色
-    icon: '#687076',
-  },
-  dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: '#fff',
-    icon: '#9BA1A6',
-  },
+ light: {
+ text: '#11181C',
+ background: '#fff',
+ tint: '#0a7ea4', // 主色
+ icon: '#687076',
+ },
+ dark: {
+ text: '#ECEDEE',
+ background: '#151718',
+ tint: '#fff',
+ icon: '#9BA1A6',
+ },
 };
 ```
 
@@ -400,13 +400,13 @@ export const Colors = {
 1. 更新 `app.json`：
 ```json
 {
-  "expo": {
-    "name": "你的应用名称",
-    "icon": "./assets/images/icon.png",
-    "splash": {
-      "image": "./assets/images/splash-icon.png"
-    }
-  }
+ "expo": {
+ "name": "你的应用名称",
+ "icon": "./assets/images/icon.png",
+ "splash": {
+ "image": "./assets/images/splash-icon.png"
+ }
+ }
 }
 ```
 
@@ -418,15 +418,15 @@ export const Colors = {
 
 ```typescript
 <Tabs.Screen
-  name="your-screen"
-  options={{
-    title: t('app.yourScreen'),
-    tabBarIcon: ({ color, size }) => <YourIcon size={size} color={color} />,
-  }}
+ name="your-screen"
+ options={{
+ title: t('app.yourScreen'),
+ tabBarIcon: ({ color, size }) => <YourIcon size={size} color={color} />,
+ }}
 />
 ```
 
-## 🤝 贡献
+## 贡献
 
 欢迎贡献！请：
 - 遵循现有代码风格
@@ -434,12 +434,12 @@ export const Colors = {
 - 更新文档
 - 在 iOS 和 Android 上测试
 
-## 📝 许可证
+## 许可证
 
 本项目根据 Apache 许可证授权 - 详见 LICENSE 文件。
 
-## 💪 支持
+## 支持
 
 如果你觉得这个模板有帮助：
-- 给它一个星标 ⭐️
+- 给它一个星标
 - [给我买杯咖啡](https://buymeacoffee.com/razikus)

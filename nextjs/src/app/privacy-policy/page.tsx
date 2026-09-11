@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   ShieldCheck,
   ArrowLeft,
+  ArrowRight,
   FileText,
   UserCheck,
   Mail,
@@ -74,7 +75,7 @@ export default function PrivacyPolicyPage() {
               <p><strong>Name / Business:</strong> Mrs Sarah Oakhena (Operating as Mrs Sarah Early Years Tutoring Platform)</p>
               <p><strong>Practice Location:</strong> Lagos, Nigeria</p>
               <p><strong>Data Protection Contact Email:</strong> <a href="mailto:sarahoakhena@gmail.com" className="text-[#1E4E8C] font-semibold hover:underline">sarahoakhena@gmail.com</a></p>
-              <p><strong>Business Telephone:</strong> <a href="tel:09133651659" className="text-[#1E4E8C] font-semibold hover:underline">09133651659</a></p>
+              <p><strong>Business WhatsApp:</strong> <a href="https://wa.me/2349133651659" target="_blank" rel="noopener noreferrer" className="text-[#1E4E8C] font-semibold hover:underline">+234 913 365 1659</a></p>
             </div>
           </section>
 
@@ -215,7 +216,7 @@ export default function PrivacyPolicyPage() {
                 <span>Dedicated Privacy Request Channel:</span>
               </div>
               <p className="text-[#6B7280]">
-                Navigate to <strong>Settings → Data Privacy & Statutory Rights</strong> inside the Parent Portal to trigger an instant data export or request complete account erasure, or email Mrs Sarah directly at:
+                Navigate to <strong>Settings &gt; Data Privacy &amp; Statutory Rights</strong> inside the Parent Portal to trigger an instant data export or request complete account erasure, or email Mrs Sarah directly at:
               </p>
               <div className="p-3 bg-[#FCFBF7] rounded-xl border border-[#F3E7C4] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <span className="font-mono font-bold text-[#1E4E8C]">sarahoakhena@gmail.com</span>
@@ -248,8 +249,9 @@ export default function PrivacyPolicyPage() {
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Return to Homepage</span>
           </Link>
-          <Link href="/terms" className="font-bold text-[#D4A017] hover:underline">
-            View Terms of Service →
+          <Link href="/terms" className="font-bold text-[#D4A017] hover:underline flex items-center gap-1">
+            <span>View Terms of Service</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
       </main>

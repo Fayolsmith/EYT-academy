@@ -3,9 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { createSPAClient } from '@/lib/supabase/client';
 import { EYTService, UserProfile } from '@/lib/eyt-service';
-import { UserRole, Database } from '@/lib/types';
-
-type ProfileRow = Database['public']['Tables']['profiles']['Row'];
+import { UserRole } from '@/lib/types';
 
 type User = {
     email: string;
@@ -20,7 +18,8 @@ interface GlobalContextType {
     user: User | null;
     profile: UserProfile | null;
     isParentPreview: boolean;
-    refreshUser: () => void;
+    refreshUser: (opts?: { silent?: boolean }) => Promise<void>;
+    updateProfileState: (partial: Partial<UserProfile>) => void;
     logout: () => Promise<void>;
     previewAsParent: () => void;
     exitParentPreview: () => void;
@@ -34,8 +33,19 @@ export function GlobalProvider({ children }: { children: React.ReactNode }) {
     const [realProfile, setRealProfile] = useState<UserProfile | null>(null);
     const [isParentPreview, setIsParentPreview] = useState(false);
 
-    const loadData = useCallback(async () => {
-        setLoading(true);
+    const updateProfileState = useCallback((partial: Partial<UserProfile>) => {
+        setRealProfile((prev) => {
+            if (!prev) return null;
+            const updated = { ...prev, ...partial };
+            EYTService.setCurrentUser(updated);
+            return updated;
+        });
+    }, []);
+
+    const loadData = useCallback(async (opts?: { silent?: boolean }) => {
+        if (!opts?.silent) {
+            setLoading(true);
+        }
         try {
             if (EYTService.isSupabaseConfigured()) {
                 const client = createSPAClient();
@@ -48,16 +58,26 @@ export function GlobalProvider({ children }: { children: React.ReactNode }) {
                         .eq('id', authUser.id)
                         .maybeSingle();
 
-                    const prof = res.data as ProfileRow | null;
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const prof = res.data as any;
+
+                    const isOwnerEmail = authUser.email?.toLowerCase().includes('sarahoakhena') || authUser.email?.toLowerCase().includes('sarahofure45');
+                    const role = prof?.role || (isOwnerEmail ? 'owner' : 'parent');
 
                     const currentProfile: UserProfile = {
                         id: authUser.id,
                         email: authUser.email || '',
-                        full_name: prof?.full_name || authUser.email?.split('@')[0] || 'User',
-                        role: prof?.role || 'parent',
-                        phone: prof?.phone || null,
+                        full_name: prof?.full_name || authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User',
+                        role,
+                        phone: prof?.phone || authUser.user_metadata?.phone || null,
                         avatar_url: prof?.avatar_url || null,
+                        timezone: prof?.timezone || authUser.user_metadata?.timezone || null,
+                        parental_consent_given: prof?.parental_consent_given ?? authUser.user_metadata?.parental_consent_given ?? true,
+                        parental_consent_at: prof?.parental_consent_at ?? authUser.user_metadata?.parental_consent_at ?? new Date(authUser.created_at).toISOString(),
+                        parental_consent_version: prof?.parental_consent_version ?? authUser.user_metadata?.parental_consent_version ?? 'NDPA-2023-v1.0',
                     };
+
+                    EYTService.setCurrentUser(currentProfile);
 
                     setUser({
                         email: authUser.email!,
@@ -103,7 +123,9 @@ export function GlobalProvider({ children }: { children: React.ReactNode }) {
                 setRealProfile(null);
             }
         } finally {
-            setLoading(false);
+            if (!opts?.silent) {
+                setLoading(false);
+            }
         }
     }, []);
 
@@ -184,6 +206,7 @@ export function GlobalProvider({ children }: { children: React.ReactNode }) {
                 profile: effectiveProfile,
                 isParentPreview,
                 refreshUser: loadData,
+                updateProfileState,
                 logout,
                 previewAsParent,
                 exitParentPreview,

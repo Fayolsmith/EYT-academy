@@ -6,13 +6,13 @@ A production-ready mobile SaaS template built with React Native, Expo, and Supab
 [![Watch the video](https://img.youtube.com/vi/qcASa0Ywsy4/maxresdefault.jpg)](https://youtube.com/shorts/qcASa0Ywsy4?feature=share)
 
 
-## 📱 Platform Support
+## Platform Support
 
 - **iOS** - Full native support
 - **Android** - Full native support
 - **Shared Backend** - Powered by Supabase
 
-## 🚀 Features
+## Features
 
 ### Authentication
 - Email/Password authentication
@@ -50,9 +50,9 @@ A production-ready mobile SaaS template built with React Native, Expo, and Supab
 
 ### Internationalization (i18n)
 - **Supported Languages:**
-  - English (en)
-  - Polish (pl)
-  - Chinese Simplified (zh)
+ - English (en)
+ - Polish (pl)
+ - Chinese Simplified (zh)
 - Automatic device language detection
 - In-app language switching
 - Persistent language preferences
@@ -69,7 +69,7 @@ A production-ready mobile SaaS template built with React Native, Expo, and Supab
 - Themed color scheme
 - Responsive layouts
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Core
 - **React Native** 0.81.4
@@ -104,7 +104,7 @@ A production-ready mobile SaaS template built with React Native, Expo, and Supab
 - React hooks (useState, useEffect, useContext)
 - AsyncStorage for persistent storage
 
-## 📦 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -145,17 +145,17 @@ Edit `app.json`:
 
 ```json
 {
-  "expo": {
-    "name": "Your App Name",
-    "slug": "your-app-slug",
-    "scheme": "yourappscheme",
-    "ios": {
-      "bundleIdentifier": "com.yourcompany.yourapp"
-    },
-    "android": {
-      "package": "com.yourcompany.yourapp"
-    }
-  }
+ "expo": {
+ "name": "Your App Name",
+ "slug": "your-app-slug",
+ "scheme": "yourappscheme",
+ "ios": {
+ "bundleIdentifier": "com.yourcompany.yourapp"
+ },
+ "android": {
+ "package": "com.yourcompany.yourapp"
+ }
+ }
 }
 ```
 
@@ -188,59 +188,59 @@ npx expo run:android
 # Or scan QR code with Expo Go app
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 supabase-expo-template/
-├── app/                          # App screens (Expo Router)
-│   ├── (app)/                    # Authenticated app screens
-│   │   ├── _layout.tsx          # Tab navigation
-│   │   ├── index.tsx            # Home screen
-│   │   ├── settings.tsx         # Settings screen
-│   │   ├── storage.tsx          # File management
-│   │   └── tasks.tsx            # Task management
-│   ├── (auth)/                   # Authentication screens
-│   │   ├── _layout.tsx          # Auth stack layout
-│   │   ├── login.tsx            # Login screen
-│   │   ├── register.tsx         # Registration screen
-│   │   ├── forgot-password.tsx  # Password reset request
-│   │   ├── reset-password.tsx   # Password reset form
-│   │   ├── two-factor.tsx       # 2FA verification
-│   │   └── verify-email.tsx     # Email verification
-│   ├── _layout.tsx              # Root layout
-│   └── index.tsx                # Initial route
-├── components/                   # Reusable components
-│   ├── MFASetup.tsx             # MFA enrollment component
-│   └── ui/                       # UI components
-│       ├── alert.tsx
-│       ├── button.tsx
-│       ├── card.tsx
-│       └── input.tsx
+├── app/ # App screens (Expo Router)
+│ ├── (app)/ # Authenticated app screens
+│ │ ├── _layout.tsx # Tab navigation
+│ │ ├── index.tsx # Home screen
+│ │ ├── settings.tsx # Settings screen
+│ │ ├── storage.tsx # File management
+│ │ └── tasks.tsx # Task management
+│ ├── (auth)/ # Authentication screens
+│ │ ├── _layout.tsx # Auth stack layout
+│ │ ├── login.tsx # Login screen
+│ │ ├── register.tsx # Registration screen
+│ │ ├── forgot-password.tsx # Password reset request
+│ │ ├── reset-password.tsx # Password reset form
+│ │ ├── two-factor.tsx # 2FA verification
+│ │ └── verify-email.tsx # Email verification
+│ ├── _layout.tsx # Root layout
+│ └── index.tsx # Initial route
+├── components/ # Reusable components
+│ ├── MFASetup.tsx # MFA enrollment component
+│ └── ui/ # UI components
+│ ├── alert.tsx
+│ ├── button.tsx
+│ ├── card.tsx
+│ └── input.tsx
 ├── constants/
-│   └── theme.ts                  # Theme colors
-├── hooks/                        # Custom hooks
-│   └── use-color-scheme.ts
-├── lib/                          # Utilities
-│   ├── i18n.ts                  # i18n configuration
-│   ├── storage.ts               # AsyncStorage wrapper
-│   ├── supabase.ts              # Supabase client
-│   └── types.ts                 # TypeScript types
-├── locales/                      # Translation files
-│   ├── en.json                  # English
-│   ├── pl.json                  # Polish
-│   └── zh.json                  # Chinese
-├── app.json                      # Expo configuration
+│ └── theme.ts # Theme colors
+├── hooks/ # Custom hooks
+│ └── use-color-scheme.ts
+├── lib/ # Utilities
+│ ├── i18n.ts # i18n configuration
+│ ├── storage.ts # AsyncStorage wrapper
+│ ├── supabase.ts # Supabase client
+│ └── types.ts # TypeScript types
+├── locales/ # Translation files
+│ ├── en.json # English
+│ ├── pl.json # Polish
+│ └── zh.json # Chinese
+├── app.json # Expo configuration
 ├── package.json
 └── tsconfig.json
 ```
 
-## 🔐 Authentication Flow
+## Authentication Flow
 
 ### Login Flow
 1. User enters email and password
 2. App checks for MFA requirement
-3. If MFA enabled → redirect to 2FA screen
-4. If no MFA → redirect to app
+3. If MFA enabled -> redirect to 2FA screen
+4. If no MFA -> redirect to app
 
 ### Registration Flow
 1. User enters email and password
@@ -261,7 +261,7 @@ supabase-expo-template/
 9. Redirect to app
 
 ### MFA Enrollment Flow
-1. User navigates to Settings → MFA
+1. User navigates to Settings -> MFA
 2. User provides device name
 3. QR code displayed
 4. User scans with authenticator app (Google Authenticator, Authy, etc.)
@@ -269,7 +269,7 @@ supabase-expo-template/
 6. Factor verified and enrolled
 7. Multiple devices can be enrolled
 
-## 🌍 Internationalization
+## Internationalization
 
 ### Adding a New Language
 
@@ -282,12 +282,12 @@ touch locales/es.json
 2. **Add translations:**
 ```json
 {
-  "auth": {
-    "login": "Iniciar sesión",
-    "register": "Registrarse",
-    ...
-  },
-  ...
+ "auth": {
+ "login": "Iniciar sesión",
+ "register": "Registrarse",
+ ...
+ },
+ ...
 }
 ```
 
@@ -296,13 +296,13 @@ touch locales/es.json
 import es from '../locales/es.json'
 
 i18n.use(initReactI18next).init({
-  resources: {
-    en: { translation: en },
-    pl: { translation: pl },
-    zh: { translation: zh },
-    es: { translation: es }, // Add here
-  },
-  ...
+ resources: {
+ en: { translation: en },
+ pl: { translation: pl },
+ zh: { translation: zh },
+ es: { translation: es }, // Add here
+ },
+ ...
 })
 ```
 
@@ -312,17 +312,17 @@ i18n.use(initReactI18next).init({
 
 ```typescript
 {
-  "auth": { /* Authentication screens */ },
-  "home": { /* Home screen */ },
-  "app": { /* App navigation */ },
-  "storage": { /* File management */ },
-  "tasks": { /* Task management */ },
-  "mfa": { /* MFA screens */ },
-  "settings": { /* Settings screen */ }
+ "auth": { /* Authentication screens */ },
+ "home": { /* Home screen */ },
+ "app": { /* App navigation */ },
+ "storage": { /* File management */ },
+ "tasks": { /* Task management */ },
+ "mfa": { /* MFA screens */ },
+ "settings": { /* Settings screen */ }
 }
 ```
 
-## 🚀 Building for Production
+## Building for Production
 
 ### iOS
 
@@ -353,22 +353,22 @@ Edit `eas.json` to configure build profiles:
 
 ```json
 {
-  "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
-    },
-    "preview": {
-      "distribution": "internal"
-    },
-    "production": {}
-  }
+ "build": {
+ "development": {
+ "developmentClient": true,
+ "distribution": "internal"
+ },
+ "preview": {
+ "distribution": "internal"
+ },
+ "production": {}
+ }
 }
 ```
 
 See [Expo EAS Build documentation](https://docs.expo.dev/build/introduction/) for details.
 
-## 🎨 Customization
+## Customization
 
 ### Colors and Theme
 
@@ -376,18 +376,18 @@ Edit `constants/theme.ts`:
 
 ```typescript
 export const Colors = {
-  light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: '#0a7ea4', // Primary color
-    icon: '#687076',
-  },
-  dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: '#fff',
-    icon: '#9BA1A6',
-  },
+ light: {
+ text: '#11181C',
+ background: '#fff',
+ tint: '#0a7ea4', // Primary color
+ icon: '#687076',
+ },
+ dark: {
+ text: '#ECEDEE',
+ background: '#151718',
+ tint: '#fff',
+ icon: '#9BA1A6',
+ },
 };
 ```
 
@@ -396,13 +396,13 @@ export const Colors = {
 1. Update `app.json`:
 ```json
 {
-  "expo": {
-    "name": "Your App Name",
-    "icon": "./assets/images/icon.png",
-    "splash": {
-      "image": "./assets/images/splash-icon.png"
-    }
-  }
+ "expo": {
+ "name": "Your App Name",
+ "icon": "./assets/images/icon.png",
+ "splash": {
+ "image": "./assets/images/splash-icon.png"
+ }
+ }
 }
 ```
 
@@ -414,15 +414,15 @@ Edit `app/(app)/_layout.tsx` to customize tabs:
 
 ```typescript
 <Tabs.Screen
-  name="your-screen"
-  options={{
-    title: t('app.yourScreen'),
-    tabBarIcon: ({ color, size }) => <YourIcon size={size} color={color} />,
-  }}
+ name="your-screen"
+ options={{
+ title: t('app.yourScreen'),
+ tabBarIcon: ({ color, size }) => <YourIcon size={size} color={color} />,
+ }}
 />
 ```
 
-## 🤝 Contributing
+## Contributing
 
 Contributions welcome! Please:
 - Follow existing code style
@@ -430,12 +430,12 @@ Contributions welcome! Please:
 - Update documentation
 - Test on both iOS and Android
 
-## 📝 License
+## License
 
 This project is licensed under the Apache License - see the LICENSE file for details.
 
-## 💪 Support
+## Support
 
 If you find this template helpful:
-- Give it a star ⭐️
+- Give it a star
 - [Buy me a coffee](https://buymeacoffee.com/razikus)

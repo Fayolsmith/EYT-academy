@@ -74,8 +74,8 @@ function runChecks() {
     'Issue 6: <Sparkles> icon removed from welcome banners'
   );
   assert(
-    !appPageContent.includes('👋'),
-    'Issue 6: Waving hand emoji 👋 removed from welcome greeting'
+    !/[\u{1F300}-\u{1FAFF}]/u.test(appPageContent),
+    'Issue 6: Waving hand emoji removed from welcome greeting'
   );
   assert(
     appPageContent.includes('Welcome back, {profile?.full_name || \'Family\'}!'),
@@ -124,7 +124,7 @@ function runChecks() {
 
   console.log(`\nResults: ${passed} / ${total} tests passed.`);
   if (passed === total) {
-    console.log('ALL PHASE 1 FIXES VERIFIED SUCCESSFULLY! ✓');
+    console.log('ALL PHASE 1 FIXES VERIFIED SUCCESSFULLY! [PASS]');
   } else {
     process.exit(1);
   }

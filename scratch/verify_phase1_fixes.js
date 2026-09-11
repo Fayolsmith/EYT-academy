@@ -12,10 +12,10 @@ let totalTests = 0;
 function assert(condition, message) {
   totalTests++;
   if (condition) {
-    console.log(`✅ PASS: ${message}`);
+    console.log(`[PASS]: ${message}`);
     passedTests++;
   } else {
-    console.error(`❌ FAIL: ${message}`);
+    console.error(`[FAIL]: ${message}`);
     process.exitCode = 1;
   }
 }
