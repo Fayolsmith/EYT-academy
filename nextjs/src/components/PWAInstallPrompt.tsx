@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { X, Smartphone, Share, PlusSquare, Check } from 'lucide-react';
+import { X, Smartphone, Share, PlusSquare, Check, MoreVertical } from 'lucide-react';
 import { usePWA } from '@/lib/context/PWAContext';
 
 export default function PWAInstallPrompt() {
@@ -100,7 +100,7 @@ export default function PWAInstallPrompt() {
                     <Check className="w-3.5 h-3.5 text-[#D4A017]" />
                   </div>
                   <span className="pt-0.5">
-                    Or open your browser menu (<strong>⋮</strong>) and tap <strong>&quot;Install app&quot;</strong> or <strong>&quot;Add to Home screen&quot;</strong>.
+                    Or open your browser menu (<MoreVertical className="w-3.5 h-3.5 inline text-[#1E4E8C] align-middle" />) and tap <strong>&quot;Install app&quot;</strong> or <strong>&quot;Add to Home screen&quot;</strong>.
                   </span>
                 </li>
               </ul>

@@ -1,18 +1,20 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Menu, X, BookOpen, Phone, Sparkles, Download, LayoutDashboard } from 'lucide-react';
+import { Menu, X, BookOpen, Sparkles, Download, LayoutDashboard, MessageCircle, ChevronDown, Camera, Mail, Star } from 'lucide-react';
 import { createSPAClient } from '@/lib/supabase/client';
 import { EYTService, UserProfile } from '@/lib/eyt-service';
 import { usePWA } from '@/lib/context/PWAContext';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authProfile, setAuthProfile] = useState<UserProfile | null>(null);
   const [isDev, setIsDev] = useState(false);
 
+  const moreDropdownRef = useRef<HTMLDivElement>(null);
   const { isInstallable, promptInstall } = usePWA();
 
   const checkAuth = async () => {
@@ -84,6 +86,30 @@ export default function Navbar() {
     }
   }, []);
 
+  // Close 'More' dropdown on outside click or Escape key
+  useEffect(() => {
+    if (!isMoreOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target as Node)) {
+        setIsMoreOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsMoreOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isMoreOpen]);
+
   const handleSignOut = async () => {
     try {
       if (EYTService.isSupabaseConfigured()) {
@@ -114,11 +140,13 @@ export default function Navbar() {
 
           <div className="flex items-center gap-3">
             <a
-              href="tel:09133651659"
+              href="https://wa.me/2349133651659"
+              target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-blue-100 hover:text-white transition-colors"
             >
-              <Phone className="w-3.5 h-3.5 text-[#D4A017]" />
-              <span className="font-semibold">09133651659</span>
+              <MessageCircle className="w-3.5 h-3.5 text-[#D4A017]" />
+              <span className="font-semibold">WhatsApp</span>
             </a>
           </div>
         </div>
@@ -129,42 +157,100 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20 items-center">
             {/* Logo: Brand mark and 'Mrs Sarah' only (no persistent age descriptor) */}
-            <Link href="/" className="flex items-center gap-3 group">
-              <div className="w-12 h-12 rounded-xl bg-[#1E4E8C] flex items-center justify-center text-white shadow-md group-hover:bg-[#153763] transition-colors relative overflow-hidden border border-[#D4A017]">
+            <Link href="/" className="flex items-center gap-3 group shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-[#1E4E8C] flex items-center justify-center text-white shadow-md group-hover:bg-[#153763] transition-colors relative overflow-hidden border border-[#D4A017] shrink-0">
                 <BookOpen className="w-6 h-6 text-[#D4A017]" />
-                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#D4A017] rounded-full flex items-center justify-center text-[9px] font-bold text-[#14263F]">
-                  ★
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-[#D4A017] rounded-full flex items-center justify-center text-[#14263F]">
+                  <Star className="w-2.5 h-2.5 fill-[#14263F]" />
                 </div>
               </div>
-              <span className="font-heading text-xl sm:text-2xl font-bold text-[#1E4E8C] leading-tight">
+              <span className="font-heading text-xl sm:text-2xl font-bold text-[#1E4E8C] leading-tight whitespace-nowrap select-none">
                 Mrs Sarah
               </span>
             </Link>
 
             {/* Desktop Navigation Links */}
-            <nav className="hidden lg:flex items-center space-x-6">
-              <Link href="#about" className="text-sm font-medium text-[#14263F] hover:text-[#1E4E8C] transition-colors">
+            <nav className="hidden xl:flex items-center gap-6 shrink-0">
+              <Link href="#about" className="text-sm font-medium text-[#14263F] hover:text-[#1E4E8C] transition-colors whitespace-nowrap">
                 About Sarah
               </Link>
-              <Link href="#services" className="text-sm font-medium text-[#14263F] hover:text-[#1E4E8C] transition-colors">
+              <Link href="#services" className="text-sm font-medium text-[#14263F] hover:text-[#1E4E8C] transition-colors whitespace-nowrap">
                 What I Tutor
               </Link>
-              <Link href="#why-me" className="text-sm font-medium text-[#14263F] hover:text-[#1E4E8C] transition-colors">
-                Why Learn With Me
+              <Link href="#why-me" className="text-sm font-medium text-[#14263F] hover:text-[#1E4E8C] transition-colors whitespace-nowrap">
+                Why Learn
               </Link>
-              <Link href="#learning-options" className="text-sm font-medium text-[#14263F] hover:text-[#1E4E8C] transition-colors">
+              <Link href="#learning-options" className="text-sm font-medium text-[#14263F] hover:text-[#1E4E8C] transition-colors whitespace-nowrap">
                 Learning Options
               </Link>
-              <Link href="#testimonials" className="text-sm font-medium text-[#14263F] hover:text-[#1E4E8C] transition-colors">
+              <Link href="#testimonials" className="text-sm font-medium text-[#14263F] hover:text-[#1E4E8C] transition-colors whitespace-nowrap">
                 Testimonials
               </Link>
-              <Link href="#enquiry" className="text-sm font-medium text-[#14263F] hover:text-[#1E4E8C] transition-colors">
-                Contact
-              </Link>
+
+              {/* 'More' dropdown for secondary items (Moments & Contact) */}
+              <div ref={moreDropdownRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsMoreOpen(!isMoreOpen)}
+                  onMouseEnter={() => setIsMoreOpen(true)}
+                  aria-expanded={isMoreOpen}
+                  className={`inline-flex items-center gap-1 text-sm font-medium transition-colors whitespace-nowrap py-2 ${
+                    isMoreOpen ? 'text-[#1E4E8C]' : 'text-[#14263F] hover:text-[#1E4E8C]'
+                  }`}
+                >
+                  <span>More</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isMoreOpen ? 'rotate-180 text-[#1E4E8C]' : 'text-gray-400'}`} />
+                </button>
+
+                {isMoreOpen && (
+                  <div
+                    onMouseLeave={() => setIsMoreOpen(false)}
+                    className="absolute top-full right-0 w-64 pt-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150"
+                  >
+                    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-2 space-y-1">
+                      <Link
+                        href="#moments"
+                        onClick={() => setIsMoreOpen(false)}
+                        className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-[#E8F0FA] transition-colors group"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-[#E8F0FA] group-hover:bg-white flex items-center justify-center text-[#1E4E8C] shrink-0 transition-colors">
+                          <Camera className="w-4 h-4 text-[#D4A017]" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-[#1E4E8C]">
+                            Moments Gallery
+                          </div>
+                          <div className="text-[11px] text-[#6B7280]">
+                            Glimpses into tutoring moments
+                          </div>
+                        </div>
+                      </Link>
+
+                      <Link
+                        href="#enquiry"
+                        onClick={() => setIsMoreOpen(false)}
+                        className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-[#E8F0FA] transition-colors group"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-amber-50 group-hover:bg-white flex items-center justify-center text-[#D4A017] shrink-0 transition-colors">
+                          <Mail className="w-4 h-4 text-[#D4A017]" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-[#1E4E8C]">
+                            Direct Contact
+                          </div>
+                          <div className="text-[11px] text-[#6B7280]">
+                            WhatsApp, email & enquiry form
+                          </div>
+                        </div>
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
             </nav>
 
             {/* Desktop Action Buttons: Exactly ONE entry point for Sign In/Dashboard */}
-            <div className="hidden sm:flex items-center space-x-3">
+            <div className="hidden xl:flex items-center gap-3 shrink-0">
               {isInstallable && (
                 <button
                   onClick={promptInstall}
@@ -211,8 +297,8 @@ export default function Navbar() {
               )}
             </div>
 
-            {/* Mobile menu button */}
-            <div className="flex items-center gap-2 lg:hidden">
+            {/* Mobile / Tablet controls */}
+            <div className="flex items-center gap-2 xl:hidden">
               {isAuthenticated ? (
                 <Link
                   href="/app"
@@ -222,10 +308,10 @@ export default function Navbar() {
                 </Link>
               ) : (
                 <Link
-                  href="/login"
-                  className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-[#1E4E8C] text-[#1E4E8C]"
+                  href="#enquiry"
+                  className="hidden sm:inline-flex text-xs font-bold px-3 py-1.5 rounded-lg bg-[#D4A017] text-white"
                 >
-                  Sign In
+                  Enquire
                 </Link>
               )}
               <button
@@ -241,7 +327,7 @@ export default function Navbar() {
 
         {/* Mobile menu dropdown */}
         {isOpen && (
-          <div className="lg:hidden bg-white border-b border-gray-200 px-4 pt-2 pb-6 space-y-3 shadow-xl">
+          <div className="xl:hidden bg-white border-b border-gray-200 px-4 pt-2 pb-6 space-y-3 shadow-xl">
             <div className="flex flex-col space-y-2 pt-2">
               <Link
                 href="#about"
@@ -270,6 +356,13 @@ export default function Navbar() {
                 className="px-3 py-2 rounded-md text-base font-medium text-[#14263F] hover:bg-[#E8F0FA] hover:text-[#1E4E8C]"
               >
                 Flexible Learning Options
+              </Link>
+              <Link
+                href="#moments"
+                onClick={() => setIsOpen(false)}
+                className="px-3 py-2 rounded-md text-base font-medium text-[#14263F] hover:bg-[#E8F0FA] hover:text-[#1E4E8C]"
+              >
+                Moments Gallery
               </Link>
               <Link
                 href="#testimonials"

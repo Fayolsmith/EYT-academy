@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { BookOpen, Phone, Mail, ArrowUp } from 'lucide-react';
+import { BookOpen, Mail, ArrowUp, MessageCircle } from 'lucide-react';
 
 export default function Footer() {
   const scrollToTop = () => {
@@ -110,9 +110,14 @@ export default function Footer() {
             </h4>
             <div className="space-y-2 text-sm text-blue-100/80">
               <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-[#D4A017]" />
-                <a href="tel:09133651659" className="hover:text-white">
-                  09133651659
+                <MessageCircle className="w-4 h-4 text-[#D4A017]" />
+                <a
+                  href="https://wa.me/2349133651659"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white"
+                >
+                  WhatsApp
                 </a>
               </div>
               <div className="flex items-center gap-2">
@@ -138,7 +143,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-blue-100/60">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <span>© {new Date().getFullYear()} Mrs Sarah Early Years Tutoring Platform. All rights reserved.</span>
+            <span>&copy; {new Date().getFullYear()} Mrs Sarah Early Years Tutoring Platform. All rights reserved.</span>
             <span>•</span>
             <Link href="/privacy-policy" className="hover:text-white underline">
               Privacy Policy

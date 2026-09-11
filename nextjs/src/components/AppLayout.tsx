@@ -23,7 +23,9 @@ import {
     ChevronLeft,
     ChevronRight,
     ChevronDown,
-    Globe
+    Globe,
+    Heart,
+    Sparkles
 } from 'lucide-react';
 import { useGlobal } from '@/lib/context/GlobalContext';
 import { EYTService } from '@/lib/eyt-service';
@@ -80,9 +82,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         window.location.href = '/login';
     };
 
+    interface NavItem {
+        name: string;
+        href: string;
+        icon: React.ComponentType<{ className?: string }>;
+        badge?: number;
+    }
+
+    const pendingTestimonialsCount = isOwner ? EYTService.getPendingTestimonialsCount() : 0;
+
     // Navigation items tailored to roles
-    const parentNav = [
+    const parentNav: NavItem[] = [
         { name: 'Dashboard Overview', href: '/app', icon: Home },
+        { name: 'Child Mode (Play & Learn)', href: '/app/child-mode', icon: Sparkles },
         { name: 'My Children', href: '/app/children', icon: Users },
         { name: 'Book Session / Schedule', href: '/app/schedule', icon: Calendar },
         { name: 'Milestones & Progress', href: '/app/milestones', icon: Award },
@@ -90,17 +102,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         { name: 'Learning Resources', href: '/app/resources', icon: FileText },
         { name: 'Invoices & Receipts', href: '/app/invoices', icon: CreditCard },
         { name: 'Messages', href: '/app/messages', icon: MessageSquare },
+        { name: 'Leave a Testimonial', href: '/app/testimonials', icon: Heart },
         { name: 'Settings', href: '/app/settings', icon: Settings },
     ];
 
-    const ownerNav = [
+    const ownerNav: NavItem[] = [
         { name: 'Tutor Overview', href: '/app', icon: Home },
         { name: 'Student Directory', href: '/app/children', icon: Users },
         { name: 'Schedule & Slots', href: '/app/schedule', icon: Calendar },
         { name: 'Milestone Tracking', href: '/app/milestones', icon: Award },
         { name: 'Assignments & Review', href: '/app/assignments', icon: BookOpen },
         { name: 'Resource Library', href: '/app/resources', icon: FileText },
+        { name: 'Child Mode Preview', href: '/app/child-mode', icon: Sparkles },
         { name: 'Enquiry Inbox', href: '/app/enquiries', icon: Mail },
+        { name: 'Testimonials', href: '/app/testimonials', icon: Heart, badge: pendingTestimonialsCount },
         { name: 'Invoices & Payments', href: '/app/invoices', icon: CreditCard },
         { name: 'Parent Messages', href: '/app/messages', icon: MessageSquare },
         { name: 'Settings & Bank', href: '/app/settings', icon: Settings },
@@ -121,6 +136,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
     if (!profile && !user) {
         return null;
+    }
+
+    // STRICT REQUIREMENT: In Child Mode, bypass adult layout entirely for full distraction-free isolation
+    if (pathname === '/app/child-mode') {
+        return <>{children}</>;
     }
 
     return (
@@ -247,6 +267,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                 >
                                     <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#D4A017]' : 'text-[#6B7280]'}`} />
                                     <span className={isCollapsed ? 'lg:hidden' : ''}>{item.name}</span>
+                                    {item.badge !== undefined && item.badge > 0 ? (
+                                        <span
+                                            className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full transition-all ${
+                                                isCollapsed ? 'lg:hidden' : ''
+                                            } ${
+                                                isActive
+                                                    ? 'bg-[#D4A017] text-white'
+                                                    : 'bg-[#E8F0FA] text-[#1E4E8C] group-hover:bg-[#D4A017] group-hover:text-white'
+                                            }`}
+                                        >
+                                            {item.badge}
+                                        </span>
+                                    ) : null}
 
                                     {/* Hover Tooltip when Collapsed */}
                                     {isCollapsed && (
@@ -465,7 +498,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 {/* Dashboard Footer with Legal Compliance Links */}
                 <footer className="py-4 px-4 sm:px-8 border-t border-gray-200/80 bg-white/60 text-[11px] text-[#6B7280] flex flex-col sm:flex-row items-center justify-between gap-2">
                     <div>
-                        © {new Date().getFullYear()} Mrs Sarah Early Years Tutoring Platform • Lagos, Nigeria
+                        &copy; {new Date().getFullYear()} Mrs Sarah Early Years Tutoring Platform • Lagos, Nigeria
                     </div>
                     <div className="flex items-center gap-3">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
